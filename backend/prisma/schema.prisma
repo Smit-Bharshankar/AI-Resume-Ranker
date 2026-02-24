@@ -7,18 +7,50 @@
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
+  engineType = "binary"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-model File {
-  id               String   @id @default(uuid())
-  fileUrl          String
-  fileStatus       String   @default("uploaded")
-  processingStage  String   @default("pending")
-  metadata         Json?
-  embedding        Unsupported("vector(1536)")?
-  createdAt        DateTime @default(now())
+enum ResumeStatus {
+  UPLOADED
+  TEXT_EXTRACTED
+  STRUCTURED
+  SCORED
+  INSIGHT_GENERATED
+  FAILED_EXTRACTION
+  FAILED_STRUCTURE
+  FAILED_SCORING
+  FAILED_INSIGHT
+}
+
+model Job {
+  id                     String   @id @default(uuid()) @db.Uuid
+  title                  String
+  rawDescription         String   @db.Text
+  structuredRequirements Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  resumes Resume[]
+}
+
+model Resume {
+  id             String       @id @default(uuid()) @db.Uuid
+  jobId          String       @db.Uuid
+  storagePath    String
+  rawText        String?      @db.Text
+  structuredData Json?
+  insights       Json?
+  status         ResumeStatus
+  score          Float?
+  scoreBreakdown Json?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
 }
