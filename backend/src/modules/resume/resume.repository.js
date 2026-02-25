@@ -55,6 +55,45 @@ const updateScore = async (id, score, scoreBreakdown = null) => {
   });
 };
 
+const getResumeById = async (id) => {
+  return prisma.resume.findUnique({
+    where: { id },
+  });
+};
+
+const completeTextExtraction = async ({ id, rawText }) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "UPLOADED",
+    },
+    data: {
+      rawText,
+      status: "TEXT_EXTRACTED",
+    },
+  });
+
+  return result.count > 0;
+};
+
+const markExtractionFailed = async (id) => {
+  return prisma.resume.updateMany({
+    where: {
+      id,
+      status: "UPLOADED",
+    },
+    data: {
+      status: "FAILED_EXTRACTION",
+    },
+  });
+};
+
+const deleteResume = async (id) => {
+  return prisma.resume.delete({
+    where: { id },
+  });
+};
+
 const getResumesByJob = async (jobId) => {
   return prisma.resume.findMany({
     where: { jobId },
@@ -68,6 +107,10 @@ const resumeRepository = {
   updateRawText,
   updateStructuredData,
   updateScore,
+  getResumeById,
+  completeTextExtraction,
+  markExtractionFailed,
+  deleteResume,
   getResumesByJob,
 };
 

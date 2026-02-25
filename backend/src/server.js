@@ -3,11 +3,21 @@ import express from "express";
 import env from "./config/env.js";
 import jobRoutes from "./modules/job/job.routes.js";
 import { errorResponse } from "./utils/api-response.js";
+import logger from "./utils/logger.js";
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+app.get("/health", (req, res) => {
+  return res.status(200).json({
+    success: true,
+    data: {
+      status: "ok",
+    },
+  });
+});
 
 app.use("/jobs", jobRoutes);
 
@@ -16,10 +26,31 @@ app.use((req, res) => {
 });
 
 app.use((error, req, res, next) => {
+  logger.error("Unhandled application error", {
+    path: req.path,
+    method: req.method,
+    error: error.message,
+  });
+
   if (res.headersSent) {
     return next(error);
   }
   return res.status(500).json(errorResponse("Internal server error"));
 });
 
-app.listen(env.port);
+const server = app.listen(env.port, () => {
+  logger.info("HTTP server started", { port: env.port, nodeEnv: env.nodeEnv });
+});
+
+process.on("unhandledRejection", (error) => {
+  logger.error("Unhandled rejection", {
+    error: error instanceof Error ? error.message : String(error),
+  });
+});
+
+process.on("uncaughtException", (error) => {
+  logger.error("Uncaught exception", { error: error.message });
+  server.close(() => {
+    process.exit(1);
+  });
+});
