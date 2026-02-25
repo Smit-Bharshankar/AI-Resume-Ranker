@@ -2,6 +2,8 @@ import { Worker } from "bullmq";
 import { connection } from "./resumeQueue.js";
 import env from "../config/env.js";
 import resumeService from "../modules/resume/resume.service.js";
+import resumeExtractionService from "../modules/ai/extraction.service.js";
+import { validateAiConfiguration } from "../modules/ai/providers/provider.factory.js";
 import supabaseStorage from "../storage/supabaseStorage.js";
 import logger from "../utils/logger.js";
 import { PDFParse } from "pdf-parse";
@@ -21,7 +23,7 @@ const processResumeJob = async (job) => {
     throw new Error("Invalid resumeId in queue payload");
   }
 
-  const resume = await resumeService.getResumeById(resumeId);
+  let resume = await resumeService.getResumeById(resumeId);
 
   if (!resume) {
     logger.warn("Skipping missing resume", {
@@ -32,79 +34,99 @@ const processResumeJob = async (job) => {
     return;
   }
 
-  if (resume.status !== "UPLOADED") {
-    logger.info("Skipping resume with non-uploaded status", {
-      queue: env.resumeQueueName,
-      resumeId,
-      status: resume.status,
-      jobId: job.id,
-    });
-    return;
-  }
-
-  try {
-    const fileBuffer = await supabaseStorage.downloadResume(resume.storagePath);
-    const parser = new PDFParse({ data: fileBuffer });
-    let parsedText = "";
-
+  if (resume.status === "UPLOADED") {
     try {
-      const parsed = await parser.getText();
-      parsedText = parsed.text ?? "";
-    } finally {
-      await parser.destroy();
-    }
+      const fileBuffer = await supabaseStorage.downloadResume(resume.storagePath);
+      const parser = new PDFParse({ data: fileBuffer });
+      let parsedText = "";
 
-    const normalizedText = normalizeText(parsedText);
+      try {
+        const parsed = await parser.getText();
+        parsedText = parsed.text ?? "";
+      } finally {
+        await parser.destroy();
+      }
 
-    if (!normalizedText) {
-      throw new Error("Extracted text was empty");
-    }
+      const normalizedText = normalizeText(parsedText);
 
-    const updated = await resumeService.completeTextExtraction({
-      id: resumeId,
-      rawText: normalizedText,
-    });
+      if (!normalizedText) {
+        throw new Error("Extracted text was empty");
+      }
 
-    if (!updated) {
-      logger.warn("Skipped completion due to concurrent status update", {
+      const updated = await resumeService.completeTextExtraction({
+        id: resumeId,
+        rawText: normalizedText,
+      });
+
+      if (!updated) {
+        logger.warn("Skipped completion due to concurrent status update", {
+          queue: env.resumeQueueName,
+          resumeId,
+          jobId: job.id,
+        });
+        return;
+      }
+
+      logger.info("Resume text extraction completed", {
         queue: env.resumeQueueName,
         resumeId,
         jobId: job.id,
       });
-      return;
+    } catch (error) {
+      const attempts = job.opts.attempts ?? env.resumeQueueAttempts;
+      const isFinalAttempt = job.attemptsMade + 1 >= attempts;
+
+      logger.error("Resume text extraction failed", {
+        queue: env.resumeQueueName,
+        resumeId,
+        jobId: job.id,
+        attemptsMade: job.attemptsMade + 1,
+        attempts,
+        isFinalAttempt,
+        error: error.message,
+      });
+
+      if (isFinalAttempt) {
+        await resumeService.markExtractionFailed(resumeId);
+      }
+
+      throw error;
     }
 
-    logger.info("Resume text extraction completed", {
-      queue: env.resumeQueueName,
-      resumeId,
-      jobId: job.id,
-    });
-  } catch (error) {
-    const attempts = job.opts.attempts ?? env.resumeQueueAttempts;
-    const isFinalAttempt = job.attemptsMade + 1 >= attempts;
-
-    logger.error("Resume text extraction failed", {
-      queue: env.resumeQueueName,
-      resumeId,
-      jobId: job.id,
-      attemptsMade: job.attemptsMade + 1,
-      attempts,
-      isFinalAttempt,
-      error: error.message,
-    });
-
-    if (isFinalAttempt) {
-      await resumeService.markExtractionFailed(resumeId);
-    }
-
-    throw error;
+    resume = await resumeService.getResumeById(resumeId);
   }
+
+  if (resume?.status === "TEXT_EXTRACTED") {
+    await resumeExtractionService.process(resumeId);
+    return;
+  }
+
+  logger.info("Skipping resume with unsupported status in worker", {
+    queue: env.resumeQueueName,
+    resumeId,
+    status: resume?.status,
+    jobId: job.id,
+  });
 };
 
 const worker = new Worker(env.resumeQueueName, processResumeJob, {
   connection,
   concurrency: env.resumeWorkerConcurrency,
 });
+
+const aiConfigHealth = validateAiConfiguration();
+for (const warning of aiConfigHealth.warnings) {
+  logger.warn("AI config warning", {
+    queue: env.resumeQueueName,
+    warning,
+  });
+}
+for (const error of aiConfigHealth.errors) {
+  logger.error("AI config error", {
+    queue: env.resumeQueueName,
+    error,
+  });
+}
 
 worker.on("error", (error) => {
   logger.error("Worker encountered an error", {

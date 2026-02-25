@@ -50,6 +50,14 @@ const markExtractionFailed = async (id) => {
   return resumeRepository.markExtractionFailed(id);
 };
 
+const completeStructureExtraction = async ({ id, structuredData }) => {
+  return resumeRepository.completeStructureExtraction({ id, structuredData });
+};
+
+const markStructureFailed = async (id) => {
+  return resumeRepository.markStructureFailed(id);
+};
+
 const deleteResume = async (id) => {
   return resumeRepository.deleteResume(id);
 };
@@ -67,6 +75,8 @@ const resumeService = {
   getResumeById,
   completeTextExtraction,
   markExtractionFailed,
+  completeStructureExtraction,
+  markStructureFailed,
   deleteResume,
   getResumesByJob,
 };

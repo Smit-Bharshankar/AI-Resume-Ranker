@@ -35,6 +35,9 @@ AI-Resume-Ranker/
 |- README.md
 ```
 
+## Backend Ops Docs
+- AI extraction runbook: [backend/docs/ai-extraction-ops.md](backend/docs/ai-extraction-ops.md)
+
 ## Planned architecture
 - Frontend: React + Tailwind CSS
 - Backend: Node.js + Express

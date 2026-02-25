@@ -4,8 +4,17 @@ import env from "./config/env.js";
 import jobRoutes from "./modules/job/job.routes.js";
 import { errorResponse } from "./utils/api-response.js";
 import logger from "./utils/logger.js";
+import { validateAiConfiguration } from "./modules/ai/providers/provider.factory.js";
 
 const app = express();
+const aiConfigHealth = validateAiConfiguration();
+
+for (const warning of aiConfigHealth.warnings) {
+  logger.warn("AI config warning", { warning });
+}
+for (const error of aiConfigHealth.errors) {
+  logger.error("AI config error", { error });
+}
 
 app.use(cors());
 app.use(express.json());

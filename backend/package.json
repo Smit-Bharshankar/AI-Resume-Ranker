@@ -8,6 +8,7 @@
     "dev": "nodemon server.js",
     "worker:resume": "node src/queue/resumeWorker.js",
     "worker:resume:dev": "nodemon src/queue/resumeWorker.js",
+    "ai:smoke": "node src/scripts/aiExtractionSmoke.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

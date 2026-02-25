@@ -88,6 +88,35 @@ const markExtractionFailed = async (id) => {
   });
 };
 
+const completeStructureExtraction = async ({ id, structuredData }) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "TEXT_EXTRACTED",
+    },
+    data: {
+      structuredData,
+      status: "STRUCTURED",
+    },
+  });
+
+  return result.count > 0;
+};
+
+const markStructureFailed = async (id) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "TEXT_EXTRACTED",
+    },
+    data: {
+      status: "FAILED_STRUCTURE",
+    },
+  });
+
+  return result.count > 0;
+};
+
 const deleteResume = async (id) => {
   return prisma.resume.delete({
     where: { id },
@@ -110,6 +139,8 @@ const resumeRepository = {
   getResumeById,
   completeTextExtraction,
   markExtractionFailed,
+  completeStructureExtraction,
+  markStructureFailed,
   deleteResume,
   getResumesByJob,
 };
