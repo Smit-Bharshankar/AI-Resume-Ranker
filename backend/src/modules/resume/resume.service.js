@@ -34,10 +34,6 @@ const updateStructuredData = async (id, structuredData) => {
   return resumeRepository.updateStructuredData(id, structuredData);
 };
 
-const updateScore = async (id, score, scoreBreakdown = null) => {
-  return resumeRepository.updateScore(id, score, scoreBreakdown);
-};
-
 const getResumeById = async (id) => {
   return resumeRepository.getResumeById(id);
 };
@@ -58,6 +54,14 @@ const markStructureFailed = async (id) => {
   return resumeRepository.markStructureFailed(id);
 };
 
+const completeScoring = async ({ id, score, scoreBreakdown }) => {
+  return resumeRepository.completeScoring({ id, score, scoreBreakdown });
+};
+
+const markScoringFailed = async (id) => {
+  return resumeRepository.markScoringFailed(id);
+};
+
 const deleteResume = async (id) => {
   return resumeRepository.deleteResume(id);
 };
@@ -71,12 +75,13 @@ const resumeService = {
   updateStatus,
   updateRawText,
   updateStructuredData,
-  updateScore,
   getResumeById,
   completeTextExtraction,
   markExtractionFailed,
   completeStructureExtraction,
   markStructureFailed,
+  completeScoring,
+  markScoringFailed,
   deleteResume,
   getResumesByJob,
 };

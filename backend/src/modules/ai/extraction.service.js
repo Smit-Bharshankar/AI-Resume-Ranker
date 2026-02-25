@@ -82,29 +82,36 @@ const requestStructuredResume = async ({ resumeId, rawText }) => {
 };
 
 const process = async (resumeId) => {
+  const startedAtMs = Date.now();
+  const serviceLogger = logger.child({
+    service: "resume-structuring",
+    resumeId,
+  });
+
   if (!resumeId || typeof resumeId !== "string") {
-    logger.warn("Skipping structured extraction due to invalid resumeId", {
-      resumeId,
-    });
+    serviceLogger.warn("Skipping structured extraction due to invalid resumeId");
     return { status: "skipped" };
   }
 
   const resume = await resumeService.getResumeById(resumeId);
   if (!resume) {
-    logger.warn("Skipping structured extraction for missing resume", { resumeId });
+    serviceLogger.warn("Skipping structured extraction for missing resume");
     return { status: "skipped" };
   }
 
+  const scopedLogger = serviceLogger.child({
+    currentStatus: resume.status,
+  });
+
+  scopedLogger.info("Structured extraction evaluation started");
+
   if (resume.status !== "TEXT_EXTRACTED") {
-    logger.info("Skipping structured extraction due to status mismatch", {
-      resumeId,
-      status: resume.status,
-    });
+    scopedLogger.info("Skipping structured extraction due to status mismatch");
     return { status: "skipped" };
   }
 
   if (!resume.rawText || typeof resume.rawText !== "string") {
-    logger.error("Cannot structure resume without extracted text", { resumeId });
+    scopedLogger.error("Cannot structure resume without extracted text");
     await resumeService.markStructureFailed(resumeId);
     return { status: "failed" };
   }
@@ -128,16 +135,16 @@ const process = async (resumeId) => {
       });
 
       if (!updated) {
-        logger.warn("Skipped structured save due to concurrent status update", {
-          resumeId,
+        scopedLogger.warn("Skipped structured save due to concurrent status update", {
           attempt: attemptNumber,
+          durationMs: Date.now() - startedAtMs,
         });
         return { status: "skipped" };
       }
 
-      logger.info("Resume structured extraction completed", {
-        resumeId,
+      scopedLogger.info("Resume structured extraction completed", {
         attempt: attemptNumber,
+        durationMs: Date.now() - startedAtMs,
       });
       return { status: "structured" };
     } catch (error) {
@@ -149,8 +156,7 @@ const process = async (resumeId) => {
         isInvalidJsonError ||
         isRetriableProviderError(error);
 
-      logger.warn("Resume structured extraction attempt failed", {
-        resumeId,
+      scopedLogger.warn("Resume structured extraction attempt failed", {
         attempt: attemptNumber,
         maxRetries,
         retriable,
@@ -159,12 +165,12 @@ const process = async (resumeId) => {
 
       if (isConfigError || isFinalAttempt || !retriable) {
         await resumeService.markStructureFailed(resumeId);
-        logger.error("Resume structured extraction failed", {
-          resumeId,
+        scopedLogger.error("Resume structured extraction failed", {
           attempt: attemptNumber,
           maxRetries,
           isFinalAttempt: true,
           error: error.message,
+          durationMs: Date.now() - startedAtMs,
         });
         return { status: "failed" };
       }

@@ -45,16 +45,6 @@ const updateStructuredData = async (id, structuredData) => {
   });
 };
 
-const updateScore = async (id, score, scoreBreakdown = null) => {
-  return prisma.resume.update({
-    where: { id },
-    data: {
-      score,
-      scoreBreakdown,
-    },
-  });
-};
-
 const getResumeById = async (id) => {
   return prisma.resume.findUnique({
     where: { id },
@@ -117,6 +107,36 @@ const markStructureFailed = async (id) => {
   return result.count > 0;
 };
 
+const completeScoring = async ({ id, score, scoreBreakdown }) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "STRUCTURED",
+    },
+    data: {
+      score,
+      scoreBreakdown,
+      status: "SCORED",
+    },
+  });
+
+  return result.count > 0;
+};
+
+const markScoringFailed = async (id) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "STRUCTURED",
+    },
+    data: {
+      status: "FAILED_SCORING",
+    },
+  });
+
+  return result.count > 0;
+};
+
 const deleteResume = async (id) => {
   return prisma.resume.delete({
     where: { id },
@@ -126,7 +146,15 @@ const deleteResume = async (id) => {
 const getResumesByJob = async (jobId) => {
   return prisma.resume.findMany({
     where: { jobId },
-    orderBy: { createdAt: "desc" },
+    orderBy: [
+      {
+        score: {
+          sort: "desc",
+          nulls: "last",
+        },
+      },
+      { createdAt: "desc" },
+    ],
   });
 };
 
@@ -135,12 +163,13 @@ const resumeRepository = {
   updateStatus,
   updateRawText,
   updateStructuredData,
-  updateScore,
   getResumeById,
   completeTextExtraction,
   markExtractionFailed,
   completeStructureExtraction,
   markStructureFailed,
+  completeScoring,
+  markScoringFailed,
   deleteResume,
   getResumesByJob,
 };

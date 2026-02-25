@@ -3,6 +3,7 @@ import { connection } from "./resumeQueue.js";
 import env from "../config/env.js";
 import resumeService from "../modules/resume/resume.service.js";
 import resumeExtractionService from "../modules/ai/extraction.service.js";
+import resumeMatchingService from "../modules/matching/matching.service.js";
 import { validateAiConfiguration } from "../modules/ai/providers/provider.factory.js";
 import supabaseStorage from "../storage/supabaseStorage.js";
 import logger from "../utils/logger.js";
@@ -17,24 +18,36 @@ const normalizeText = (rawText) => {
 };
 
 const processResumeJob = async (job) => {
+  const startedAtMs = Date.now();
   const { resumeId } = job.data ?? {};
 
   if (!resumeId || typeof resumeId !== "string") {
     throw new Error("Invalid resumeId in queue payload");
   }
 
+  const baseJobLogger = logger.child({
+    queue: env.resumeQueueName,
+    jobId: job.id,
+    resumeId,
+    attemptsMade: job.attemptsMade + 1,
+    maxAttempts: job.opts.attempts ?? env.resumeQueueAttempts,
+  });
+
+  baseJobLogger.info("Resume pipeline job started");
+
   let resume = await resumeService.getResumeById(resumeId);
 
   if (!resume) {
-    logger.warn("Skipping missing resume", {
-      queue: env.resumeQueueName,
-      resumeId,
-      jobId: job.id,
-    });
+    baseJobLogger.warn("Skipping missing resume");
     return;
   }
 
+  const jobLogger = baseJobLogger.child({
+    currentStatus: resume.status,
+  });
+
   if (resume.status === "UPLOADED") {
+    const extractionStartedAtMs = Date.now();
     try {
       const fileBuffer = await supabaseStorage.downloadResume(resume.storagePath);
       const parser = new PDFParse({ data: fileBuffer });
@@ -59,30 +72,25 @@ const processResumeJob = async (job) => {
       });
 
       if (!updated) {
-        logger.warn("Skipped completion due to concurrent status update", {
-          queue: env.resumeQueueName,
-          resumeId,
-          jobId: job.id,
+        jobLogger.warn("Skipped completion due to concurrent status update", {
+          stage: "text_extraction",
+          durationMs: Date.now() - extractionStartedAtMs,
         });
         return;
       }
 
-      logger.info("Resume text extraction completed", {
-        queue: env.resumeQueueName,
-        resumeId,
-        jobId: job.id,
+      jobLogger.info("Resume text extraction completed", {
+        stage: "text_extraction",
+        durationMs: Date.now() - extractionStartedAtMs,
       });
     } catch (error) {
       const attempts = job.opts.attempts ?? env.resumeQueueAttempts;
       const isFinalAttempt = job.attemptsMade + 1 >= attempts;
 
-      logger.error("Resume text extraction failed", {
-        queue: env.resumeQueueName,
-        resumeId,
-        jobId: job.id,
-        attemptsMade: job.attemptsMade + 1,
-        attempts,
+      jobLogger.error("Resume text extraction failed", {
+        stage: "text_extraction",
         isFinalAttempt,
+        durationMs: Date.now() - extractionStartedAtMs,
         error: error.message,
       });
 
@@ -97,15 +105,60 @@ const processResumeJob = async (job) => {
   }
 
   if (resume?.status === "TEXT_EXTRACTED") {
-    await resumeExtractionService.process(resumeId);
+    const structuringStartedAtMs = Date.now();
+    const structureResult = await resumeExtractionService.process(resumeId);
+    jobLogger.info("Resume structuring stage finished", {
+      stage: "structuring",
+      structureStatus: structureResult?.status ?? "unknown",
+      durationMs: Date.now() - structuringStartedAtMs,
+    });
+
+    if (structureResult?.status === "structured") {
+      const scoringStartedAtMs = Date.now();
+      await resumeMatchingService.process(resumeId);
+      jobLogger.info("Resume scoring stage finished", {
+        stage: "scoring",
+        durationMs: Date.now() - scoringStartedAtMs,
+        totalDurationMs: Date.now() - startedAtMs,
+      });
+      return;
+    }
+
+    if (structureResult?.status === "failed") {
+      jobLogger.warn("Stopping pipeline due to structuring failure", {
+        stage: "structuring",
+        totalDurationMs: Date.now() - startedAtMs,
+      });
+      return;
+    }
+
+    const refreshedResume = await resumeService.getResumeById(resumeId);
+    if (refreshedResume?.status === "STRUCTURED") {
+      const scoringStartedAtMs = Date.now();
+      await resumeMatchingService.process(resumeId);
+      jobLogger.info("Resume scoring stage finished after status refresh", {
+        stage: "scoring",
+        durationMs: Date.now() - scoringStartedAtMs,
+        totalDurationMs: Date.now() - startedAtMs,
+      });
+    }
     return;
   }
 
-  logger.info("Skipping resume with unsupported status in worker", {
-    queue: env.resumeQueueName,
-    resumeId,
+  if (resume?.status === "STRUCTURED") {
+    const scoringStartedAtMs = Date.now();
+    await resumeMatchingService.process(resumeId);
+    jobLogger.info("Resume scoring stage finished from structured state", {
+      stage: "scoring",
+      durationMs: Date.now() - scoringStartedAtMs,
+      totalDurationMs: Date.now() - startedAtMs,
+    });
+    return;
+  }
+
+  jobLogger.info("Skipping resume with unsupported status in worker", {
     status: resume?.status,
-    jobId: job.id,
+    totalDurationMs: Date.now() - startedAtMs,
   });
 };
 
