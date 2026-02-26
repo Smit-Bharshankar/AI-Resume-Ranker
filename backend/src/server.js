@@ -35,6 +35,10 @@ app.use((req, res) => {
 });
 
 app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+    return res.status(400).json(errorResponse("Invalid JSON payload"));
+  }
+
   logger.error("Unhandled application error", {
     path: req.path,
     method: req.method,

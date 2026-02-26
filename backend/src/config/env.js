@@ -46,6 +46,20 @@ const env = {
   resumeQueueAttempts: toNumber(process.env.RESUME_QUEUE_ATTEMPTS, 3),
   resumeQueueBackoffMs: toNumber(process.env.RESUME_QUEUE_BACKOFF_MS, 2000),
   resumeWorkerConcurrency: toNumber(process.env.RESUME_WORKER_CONCURRENCY, 3),
+  jobExtractionQueueName:
+    process.env.JOB_EXTRACTION_QUEUE_NAME ?? "job-requirements-extraction",
+  jobExtractionQueueAttempts: toNumber(
+    process.env.JOB_EXTRACTION_QUEUE_ATTEMPTS,
+    3,
+  ),
+  jobExtractionQueueBackoffMs: toNumber(
+    process.env.JOB_EXTRACTION_QUEUE_BACKOFF_MS,
+    2000,
+  ),
+  jobExtractionWorkerConcurrency: toNumber(
+    process.env.JOB_EXTRACTION_WORKER_CONCURRENCY,
+    4,
+  ),
   aiProvider,
   aiApiKey:
     process.env.AI_API_KEY ??

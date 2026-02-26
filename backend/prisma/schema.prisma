@@ -26,11 +26,20 @@ enum ResumeStatus {
   FAILED_INSIGHT
 }
 
+enum JobStatus {
+  DRAFT
+  EXTRACTING_REQUIREMENTS
+  REQUIREMENTS_STRUCTURED
+  ACTIVE
+  FAILED_STRUCTURE
+}
+
 model Job {
   id                     String   @id @default(uuid()) @db.Uuid
   title                  String
   rawDescription         String   @db.Text
   structuredRequirements Json?
+  status                 JobStatus @default(DRAFT)
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 

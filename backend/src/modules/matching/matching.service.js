@@ -48,6 +48,13 @@ const process = async (resumeId) => {
     return { status: "skipped" };
   }
 
+  if (job.status !== "ACTIVE") {
+    scopedLogger.info("Skipping resume scoring because job is not ACTIVE", {
+      jobStatus: job.status,
+    });
+    return { status: "skipped" };
+  }
+
   if (!hasStructuredRequirements(job.structuredRequirements)) {
     scopedLogger.warn("Skipping resume scoring due to missing structured requirements");
     return { status: "skipped" };
