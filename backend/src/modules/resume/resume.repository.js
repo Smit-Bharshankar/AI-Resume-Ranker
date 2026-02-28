@@ -137,6 +137,49 @@ const markScoringFailed = async (id) => {
   return result.count > 0;
 };
 
+const startInsightsGeneration = async (id) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "SCORED",
+    },
+    data: {
+      status: "INSIGHTS_GENERATING",
+    },
+  });
+
+  return result.count > 0;
+};
+
+const completeInsightsGeneration = async ({ id, insights }) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "INSIGHTS_GENERATING",
+    },
+    data: {
+      insights,
+      status: "INSIGHTS_GENERATED",
+    },
+  });
+
+  return result.count > 0;
+};
+
+const markInsightsFailed = async (id) => {
+  const result = await prisma.resume.updateMany({
+    where: {
+      id,
+      status: "INSIGHTS_GENERATING",
+    },
+    data: {
+      status: "FAILED_INSIGHTS",
+    },
+  });
+
+  return result.count > 0;
+};
+
 const deleteResume = async (id) => {
   return prisma.resume.delete({
     where: { id },
@@ -170,6 +213,9 @@ const resumeRepository = {
   markStructureFailed,
   completeScoring,
   markScoringFailed,
+  startInsightsGeneration,
+  completeInsightsGeneration,
+  markInsightsFailed,
   deleteResume,
   getResumesByJob,
 };

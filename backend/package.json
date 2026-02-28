@@ -8,6 +8,8 @@
     "dev": "nodemon server.js",
     "worker:resume": "node src/queue/resumeWorker.js",
     "worker:resume:dev": "nodemon src/queue/resumeWorker.js",
+    "worker:insight": "node src/queue/insightWorker.js",
+    "worker:insight:dev": "nodemon src/queue/insightWorker.js",
     "worker:job-extraction": "node src/queue/jobExtractionWorker.js",
     "worker:job-extraction:dev": "nodemon src/queue/jobExtractionWorker.js",
     "ai:smoke": "node src/scripts/aiExtractionSmoke.js",

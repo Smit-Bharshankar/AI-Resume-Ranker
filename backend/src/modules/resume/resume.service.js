@@ -62,6 +62,18 @@ const markScoringFailed = async (id) => {
   return resumeRepository.markScoringFailed(id);
 };
 
+const startInsightsGeneration = async (id) => {
+  return resumeRepository.startInsightsGeneration(id);
+};
+
+const completeInsightsGeneration = async ({ id, insights }) => {
+  return resumeRepository.completeInsightsGeneration({ id, insights });
+};
+
+const markInsightsFailed = async (id) => {
+  return resumeRepository.markInsightsFailed(id);
+};
+
 const deleteResume = async (id) => {
   return resumeRepository.deleteResume(id);
 };
@@ -82,6 +94,9 @@ const resumeService = {
   markStructureFailed,
   completeScoring,
   markScoringFailed,
+  startInsightsGeneration,
+  completeInsightsGeneration,
+  markInsightsFailed,
   deleteResume,
   getResumesByJob,
 };

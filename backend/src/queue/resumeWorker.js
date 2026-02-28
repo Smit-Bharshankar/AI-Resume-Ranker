@@ -4,6 +4,7 @@ import env from "../config/env.js";
 import resumeService from "../modules/resume/resume.service.js";
 import resumeExtractionService from "../modules/ai/extraction.service.js";
 import resumeMatchingService from "../modules/matching/matching.service.js";
+import { enqueueResumeInsightGeneration } from "./insightQueue.js";
 import { validateAiConfiguration } from "../modules/ai/providers/provider.factory.js";
 import supabaseStorage from "../storage/supabaseStorage.js";
 import logger from "../utils/logger.js";
@@ -15,6 +16,23 @@ const normalizeText = (rawText) => {
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+};
+
+const enqueueInsightsPipeline = async ({ resumeId, jobLogger }) => {
+  await enqueueResumeInsightGeneration({ resumeId });
+
+  const transitioned = await resumeService.startInsightsGeneration(resumeId);
+  if (!transitioned) {
+    jobLogger.warn("Skipped insights transition due to concurrent status update", {
+      stage: "insights_enqueue",
+    });
+    return;
+  }
+
+  jobLogger.info("Resume insights generation enqueued", {
+    stage: "insights_enqueue",
+    nextStatus: "INSIGHTS_GENERATING",
+  });
 };
 
 const processResumeJob = async (job) => {
@@ -115,12 +133,24 @@ const processResumeJob = async (job) => {
 
     if (structureResult?.status === "structured") {
       const scoringStartedAtMs = Date.now();
-      await resumeMatchingService.process(resumeId);
+      const scoringResult = await resumeMatchingService.process(resumeId);
       jobLogger.info("Resume scoring stage finished", {
         stage: "scoring",
+        scoringStatus: scoringResult?.status ?? "unknown",
         durationMs: Date.now() - scoringStartedAtMs,
         totalDurationMs: Date.now() - startedAtMs,
       });
+
+      if (scoringResult?.status === "scored") {
+        try {
+          await enqueueInsightsPipeline({ resumeId, jobLogger });
+        } catch (error) {
+          jobLogger.error("Failed to enqueue resume insights", {
+            stage: "insights_enqueue",
+            error: error.message,
+          });
+        }
+      }
       return;
     }
 
@@ -135,24 +165,60 @@ const processResumeJob = async (job) => {
     const refreshedResume = await resumeService.getResumeById(resumeId);
     if (refreshedResume?.status === "STRUCTURED") {
       const scoringStartedAtMs = Date.now();
-      await resumeMatchingService.process(resumeId);
+      const scoringResult = await resumeMatchingService.process(resumeId);
       jobLogger.info("Resume scoring stage finished after status refresh", {
         stage: "scoring",
+        scoringStatus: scoringResult?.status ?? "unknown",
         durationMs: Date.now() - scoringStartedAtMs,
         totalDurationMs: Date.now() - startedAtMs,
       });
+
+      if (scoringResult?.status === "scored") {
+        try {
+          await enqueueInsightsPipeline({ resumeId, jobLogger });
+        } catch (error) {
+          jobLogger.error("Failed to enqueue resume insights", {
+            stage: "insights_enqueue",
+            error: error.message,
+          });
+        }
+      }
     }
     return;
   }
 
   if (resume?.status === "STRUCTURED") {
     const scoringStartedAtMs = Date.now();
-    await resumeMatchingService.process(resumeId);
+    const scoringResult = await resumeMatchingService.process(resumeId);
     jobLogger.info("Resume scoring stage finished from structured state", {
       stage: "scoring",
+      scoringStatus: scoringResult?.status ?? "unknown",
       durationMs: Date.now() - scoringStartedAtMs,
       totalDurationMs: Date.now() - startedAtMs,
     });
+
+    if (scoringResult?.status === "scored") {
+      try {
+        await enqueueInsightsPipeline({ resumeId, jobLogger });
+      } catch (error) {
+        jobLogger.error("Failed to enqueue resume insights", {
+          stage: "insights_enqueue",
+          error: error.message,
+        });
+      }
+    }
+    return;
+  }
+
+  if (resume?.status === "SCORED") {
+    try {
+      await enqueueInsightsPipeline({ resumeId, jobLogger });
+    } catch (error) {
+      jobLogger.error("Failed to enqueue resume insights from scored state", {
+        stage: "insights_enqueue",
+        error: error.message,
+      });
+    }
     return;
   }
 

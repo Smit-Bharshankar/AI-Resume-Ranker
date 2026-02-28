@@ -28,7 +28,7 @@ const resolveAiProvider = () => {
 };
 
 const aiProvider = resolveAiProvider();
-const defaultAiModel = aiProvider === "openai" ? "gpt-4o-mini" : "gemini-2.5-flash";
+const defaultAiModel = aiProvider === "openai" ? "gpt-4o-mini" : "gemini-2.5-flash-lite";
 
 const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -46,6 +46,20 @@ const env = {
   resumeQueueAttempts: toNumber(process.env.RESUME_QUEUE_ATTEMPTS, 3),
   resumeQueueBackoffMs: toNumber(process.env.RESUME_QUEUE_BACKOFF_MS, 2000),
   resumeWorkerConcurrency: toNumber(process.env.RESUME_WORKER_CONCURRENCY, 3),
+  resumeInsightQueueName:
+    process.env.RESUME_INSIGHT_QUEUE_NAME ?? "resume-insight-generation",
+  resumeInsightQueueAttempts: toNumber(
+    process.env.RESUME_INSIGHT_QUEUE_ATTEMPTS,
+    2,
+  ),
+  resumeInsightQueueBackoffMs: toNumber(
+    process.env.RESUME_INSIGHT_QUEUE_BACKOFF_MS,
+    2000,
+  ),
+  resumeInsightWorkerConcurrency: toNumber(
+    process.env.RESUME_INSIGHT_WORKER_CONCURRENCY,
+    4,
+  ),
   jobExtractionQueueName:
     process.env.JOB_EXTRACTION_QUEUE_NAME ?? "job-requirements-extraction",
   jobExtractionQueueAttempts: toNumber(
