@@ -1,0 +1,98 @@
+import { FormEvent, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
+import { createJob } from "../../api/jobsApi";
+import { ErrorState } from "../../components/common/ErrorState";
+import { Loader } from "../../components/common/Loader";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Job } from "../../types/job";
+
+export function CreateJobPage() {
+  const navigate = useNavigate();
+  const [title, setTitle] = useState<string>("");
+  const [rawDescription, setRawDescription] = useState<string>("");
+  const [formError, setFormError] = useState<string>("");
+
+  const createMutation = useMutation<Job, Error, { title: string; rawDescription: string }>(
+    {
+      mutationFn: ({ title: inputTitle, rawDescription: inputRawDescription }) =>
+        createJob({ title: inputTitle, rawDescription: inputRawDescription }),
+      onSuccess: (createdJob) => {
+        navigate(`/jobs/${createdJob.id}`);
+      },
+      retry: 0,
+    }
+  );
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError("");
+
+    const trimmedTitle = title.trim();
+    const trimmedDescription = rawDescription.trim();
+
+    if (!trimmedTitle) {
+      setFormError("Title is required.");
+      return;
+    }
+
+    if (!trimmedDescription) {
+      setFormError("Raw description is required.");
+      return;
+    }
+
+    await createMutation.mutateAsync({
+      title: trimmedTitle,
+      rawDescription: trimmedDescription,
+    });
+  };
+
+  return (
+    <div className="mx-auto max-w-3xl space-y-6 p-6">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-slate-900">Create Job</h1>
+        <Link className="text-sm text-slate-600 underline" to="/jobs">
+          Back to Jobs
+        </Link>
+      </div>
+
+      <Card>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Title</label>
+            <input
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              disabled={createMutation.isPending}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Raw Description
+            </label>
+            <textarea
+              rows={10}
+              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+              value={rawDescription}
+              onChange={(event) => setRawDescription(event.target.value)}
+              disabled={createMutation.isPending}
+            />
+          </div>
+
+          <Button type="submit" disabled={createMutation.isPending}>
+            {createMutation.isPending ? "Creating..." : "Create Job"}
+          </Button>
+        </form>
+      </Card>
+
+      {createMutation.isPending ? <Loader label="Creating job..." /> : null}
+      {formError ? <ErrorState title="Validation error" message={formError} /> : null}
+      {createMutation.isError ? (
+        <ErrorState title="Failed to create job" message={createMutation.error.message} />
+      ) : null}
+    </div>
+  );
+}
