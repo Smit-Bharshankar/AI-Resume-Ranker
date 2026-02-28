@@ -86,6 +86,19 @@ export function JobDetailPage() {
         </Link>
       </div>
 
+       {isJobActive(job.status) ? (
+        <Card>
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-emerald-700">
+              This job is active and ready for candidate workflows.
+            </p>
+            <Link className="text-sm text-slate-700 underline" to={`/jobs/${job.id}/candidates`}>
+              Open Candidates
+            </Link>
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-900">Raw Description</h2>
         <p className="whitespace-pre-wrap text-sm text-slate-700">{job.rawDescription}</p>
@@ -111,14 +124,6 @@ export function JobDetailPage() {
           <RequirementsEditor jobId={job.id} initialRequirements={job.structuredRequirements} />
           <ActivateJobButton jobId={job.id} />
         </div>
-      ) : null}
-
-      {isJobActive(job.status) ? (
-        <Card>
-          <p className="text-sm font-medium text-emerald-700">
-            This job is active and ready for candidate workflows.
-          </p>
-        </Card>
       ) : null}
 
       {pollingQuery.isError ? (

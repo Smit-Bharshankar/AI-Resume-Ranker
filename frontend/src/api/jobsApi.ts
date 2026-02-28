@@ -32,7 +32,7 @@ const isJobShape = (payload: unknown): payload is Job => {
 
 export const getJobs = async (): Promise<Job[]> => {
   const payload = await request<unknown>(
-    axiosClient.get<unknown>("/jobs/069e07b6-413c-4244-bf5c-b3875643f572")
+    axiosClient.get<unknown>("/jobs/")
   );
 
   if (Array.isArray(payload)) {
