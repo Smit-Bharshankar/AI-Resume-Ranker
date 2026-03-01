@@ -19,6 +19,7 @@ const uploadResumes = async (req, res) => {
     }
 
     const result = await uploadService.uploadResumesForJob({
+      userId: req.user.id,
       jobId,
       files,
     });

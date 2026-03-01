@@ -114,7 +114,7 @@ export function CandidateDetailPage() {
       {isFailed ? (
         <ErrorState
           title="Candidate processing failed"
-          message={`Processing ended with status: ${resume.status.replaceAll("_", " ")}.`}
+          message={`Processing ended with status: ${resume.status.replace(/_/g, " ")}.`}
         />
       ) : null}
 

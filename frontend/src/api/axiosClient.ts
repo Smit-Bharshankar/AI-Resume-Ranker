@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosResponse } from "axios";
+import { supabase } from "../lib/supabaseClient";
 
 type ApiSuccessEnvelope<T> = {
   success: true;
@@ -27,10 +28,14 @@ export class ApiClientError extends Error {
 
 const parseErrorMessage = (error: AxiosError<ApiErrorEnvelope>): ErrorPayload => {
   const statusCode = error.response?.status;
-  const message =
+  let message =
     error.response?.data?.error ??
     error.message ??
     "Unexpected network error. Please try again.";
+
+  if (statusCode === 401) {
+    message = "Your session has expired. Please log in again.";
+  }
 
   return { message, statusCode };
 };
@@ -64,9 +69,27 @@ export const parseApiResponse = <T>(response: AxiosResponse<unknown>): T => {
   return payload as T;
 };
 
+axiosClient.interceptors.request.use(async (config) => {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  return config;
+});
+
 axiosClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<ApiErrorEnvelope>) => {
+  async (error: AxiosError<ApiErrorEnvelope>) => {
+    if (error.response?.status === 401) {
+      await supabase.auth.signOut();
+      if (window.location.pathname !== "/login") {
+        window.location.replace("/login");
+      }
+    }
+
     throw new ApiClientError(parseErrorMessage(error));
   }
 );

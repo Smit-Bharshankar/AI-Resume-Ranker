@@ -18,7 +18,7 @@ const toScoreLabel = (score?: number): string => {
 
 const toRecommendationLabel = (resume: Resume): string => {
   const recommendation = resume.insights?.recommendation;
-  return recommendation ? recommendation.replaceAll("_", " ") : "-";
+  return recommendation ? recommendation.replace(/_/g, " ") : "-";
 };
 
 export function CandidateRow({ resume }: CandidateRowProps) {

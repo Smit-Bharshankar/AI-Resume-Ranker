@@ -13,7 +13,7 @@ const getResumeById = async (req, res) => {
       return res.status(400).json(errorResponse("Invalid resume id"));
     }
 
-    const resume = await resumeService.getResumeById(id);
+    const resume = await resumeService.getResumeById(id, req.user.id);
     if (!resume) {
       return res.status(404).json(errorResponse("Resume not found"));
     }

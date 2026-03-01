@@ -1,9 +1,13 @@
 import { Router } from "express";
 import jobController from "./job.controller.js";
 import uploadRoutes from "../upload/upload.routes.js";
+import authMiddleware from "../../middleware/auth.middleware.js";
 
 const jobRoutes = Router();
 
+jobRoutes.use(authMiddleware);
+
+jobRoutes.get("/", jobController.getJobs);
 jobRoutes.post("/", jobController.createJob);
 jobRoutes.post("/:id/extract", jobController.extractRequirements);
 jobRoutes.patch("/:id/requirements", jobController.patchRequirements);

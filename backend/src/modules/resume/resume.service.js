@@ -34,8 +34,8 @@ const updateStructuredData = async (id, structuredData) => {
   return resumeRepository.updateStructuredData(id, structuredData);
 };
 
-const getResumeById = async (id) => {
-  return resumeRepository.getResumeById(id);
+const getResumeById = async (id, userId) => {
+  return resumeRepository.getResumeById(id, userId);
 };
 
 const completeTextExtraction = async ({ id, rawText }) => {
@@ -78,8 +78,8 @@ const deleteResume = async (id) => {
   return resumeRepository.deleteResume(id);
 };
 
-const getResumesByJob = async (jobId) => {
-  return resumeRepository.getResumesByJob(jobId);
+const getResumesByJob = async (jobId, userId) => {
+  return resumeRepository.getResumesByJob(jobId, userId);
 };
 
 const resumeService = {

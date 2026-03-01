@@ -34,6 +34,12 @@ const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: toNumber(process.env.PORT, 5000),
   supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey:
+    process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY ?? "",
+  authRequireEmailConfirmation: toBoolean(
+    process.env.AUTH_REQUIRE_EMAIL_CONFIRMATION,
+    true,
+  ),
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
   supabaseStorageBucket: process.env.SUPABASE_STORAGE_BUCKET ?? "resumes",
   redisUrl: process.env.REDIS_URL ?? "",

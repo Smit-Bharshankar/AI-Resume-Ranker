@@ -11,7 +11,7 @@ type CandidateStatusBadgeProps = {
 };
 
 const formatStatusLabel = (status: ResumeStatus): string =>
-  status.replaceAll("_", " ");
+  status.replace(/_/g, " ");
 
 export function CandidateStatusBadge({ status }: CandidateStatusBadgeProps) {
   if (isResumeProcessingStatus(status)) {

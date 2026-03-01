@@ -51,7 +51,7 @@ export function InsightRecommendation({
   return (
     <Card className="space-y-2">
       <h3 className="text-lg font-semibold text-slate-900">Recommendation</h3>
-      <Badge tone={getTone(recommendation)}>{recommendation.replaceAll("_", " ")}</Badge>
+      <Badge tone={getTone(recommendation)}>{recommendation.replace(/_/g, " ")}</Badge>
     </Card>
   );
 }

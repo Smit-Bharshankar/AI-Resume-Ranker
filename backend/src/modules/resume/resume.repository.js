@@ -1,5 +1,18 @@
 import prisma from "../../config/prisma.js";
 
+const withJobUserScope = (where, userId) => {
+  if (!userId) {
+    return where;
+  }
+
+  return {
+    ...where,
+    job: {
+      userId,
+    },
+  };
+};
+
 const createResume = async ({
   jobId,
   storagePath,
@@ -45,9 +58,9 @@ const updateStructuredData = async (id, structuredData) => {
   });
 };
 
-const getResumeById = async (id) => {
-  return prisma.resume.findUnique({
-    where: { id },
+const getResumeById = async (id, userId) => {
+  return prisma.resume.findFirst({
+    where: withJobUserScope({ id }, userId),
   });
 };
 
@@ -186,9 +199,9 @@ const deleteResume = async (id) => {
   });
 };
 
-const getResumesByJob = async (jobId) => {
+const getResumesByJob = async (jobId, userId) => {
   return prisma.resume.findMany({
-    where: { jobId },
+    where: withJobUserScope({ jobId }, userId),
     orderBy: [
       {
         score: {

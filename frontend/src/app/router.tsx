@@ -1,4 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "../components/auth/ProtectedRoute";
+import { LoginPage } from "../pages/auth/LoginPage";
+import { SignupPage } from "../pages/auth/SignupPage";
 import { CandidateDetailPage } from "../pages/candidates/CandidateDetailPage";
 import { CandidatesListPage } from "../pages/candidates/CandidatesListPage";
 import { CreateJobPage } from "../pages/jobs/CreateJobPage";
@@ -11,23 +14,51 @@ export const router = createBrowserRouter([
     element: <Navigate to="/jobs" replace />,
   },
   {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/signup",
+    element: <SignupPage />,
+  },
+  {
     path: "/jobs",
-    element: <JobsListPage />,
+    element: (
+      <ProtectedRoute>
+        <JobsListPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/jobs/create",
-    element: <CreateJobPage />,
+    element: (
+      <ProtectedRoute>
+        <CreateJobPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/jobs/:jobId",
-    element: <JobDetailPage />,
+    element: (
+      <ProtectedRoute>
+        <JobDetailPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/jobs/:jobId/candidates",
-    element: <CandidatesListPage />,
+    element: (
+      <ProtectedRoute>
+        <CandidatesListPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/candidates/:resumeId",
-    element: <CandidateDetailPage />,
+    element: (
+      <ProtectedRoute>
+        <CandidateDetailPage />
+      </ProtectedRoute>
+    ),
   },
 ]);

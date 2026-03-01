@@ -4,8 +4,8 @@ import supabaseStorage from "../../storage/supabaseStorage.js";
 import { enqueueResumeExtraction } from "../../queue/resumeQueue.js";
 import logger from "../../utils/logger.js";
 
-const uploadResumesForJob = async ({ jobId, files }) => {
-  const job = await jobService.getJobById(jobId);
+const uploadResumesForJob = async ({ userId, jobId, files }) => {
+  const job = await jobService.getJobById(jobId, userId);
 
   if (!job) {
     const error = new Error("Job not found");

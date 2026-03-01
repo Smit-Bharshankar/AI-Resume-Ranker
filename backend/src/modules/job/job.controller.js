@@ -11,6 +11,15 @@ import {
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+const getJobs = async (req, res) => {
+  try {
+    const jobs = await jobService.getJobsByUserId(req.user.id);
+    return res.status(200).json(successResponse(jobs));
+  } catch (error) {
+    return handleControllerError(res, error, "Failed to fetch jobs");
+  }
+};
+
 const createJob = async (req, res) => {
   try {
     const { title, rawDescription } = req.body ?? {};
@@ -28,6 +37,7 @@ const createJob = async (req, res) => {
     }
 
     const job = await jobService.createJob({
+      userId: req.user.id,
       title: title.trim(),
       rawDescription: rawDescription.trim(),
     });
@@ -46,7 +56,7 @@ const extractRequirements = async (req, res) => {
       return res.status(400).json(errorResponse("Invalid job id"));
     }
 
-    const job = await jobService.getJobById(id);
+    const job = await jobService.getJobById(id, req.user.id);
     if (!job) {
       return res.status(404).json(errorResponse("Job not found"));
     }
@@ -61,6 +71,7 @@ const extractRequirements = async (req, res) => {
       id,
       currentStatus: job.status,
       nextStatus: "EXTRACTING_REQUIREMENTS",
+      userId: req.user.id,
     });
 
     if (!transitioned) {
@@ -74,6 +85,7 @@ const extractRequirements = async (req, res) => {
         id,
         currentStatus: "EXTRACTING_REQUIREMENTS",
         nextStatus: job.status,
+        userId: req.user.id,
       });
       throw error;
     }
@@ -95,7 +107,7 @@ const getJobById = async (req, res) => {
       return res.status(400).json(errorResponse("Invalid job id"));
     }
 
-    const job = await jobService.getJobById(id);
+    const job = await jobService.getJobById(id, req.user.id);
 
     if (!job) {
       return res.status(404).json(errorResponse("Job not found"));
@@ -115,13 +127,13 @@ const getResumesByJob = async (req, res) => {
       return res.status(400).json(errorResponse("Invalid job id"));
     }
 
-    const job = await jobService.getJobById(id);
+    const job = await jobService.getJobById(id, req.user.id);
 
     if (!job) {
       return res.status(404).json(errorResponse("Job not found"));
     }
 
-    const resumes = await resumeService.getResumesByJob(id);
+    const resumes = await resumeService.getResumesByJob(id, req.user.id);
 
     return res.status(200).json(successResponse(resumes));
   } catch (error) {
@@ -137,7 +149,7 @@ const patchRequirements = async (req, res) => {
       return res.status(400).json(errorResponse("Invalid job id"));
     }
 
-    const job = await jobService.getJobById(id);
+    const job = await jobService.getJobById(id, req.user.id);
     if (!job) {
       return res.status(404).json(errorResponse("Job not found"));
     }
@@ -154,13 +166,14 @@ const patchRequirements = async (req, res) => {
       id,
       status: "REQUIREMENTS_STRUCTURED",
       structuredRequirements,
+      userId: req.user.id,
     });
 
     if (!updated) {
       return res.status(409).json(errorResponse("Job status changed, please retry"));
     }
 
-    const refreshed = await jobService.getJobById(id);
+    const refreshed = await jobService.getJobById(id, req.user.id);
     return res.status(200).json(successResponse(refreshed));
   } catch (error) {
     if (error instanceof JobSchemaValidationError) {
@@ -183,7 +196,7 @@ const activateJob = async (req, res) => {
       return res.status(400).json(errorResponse("Invalid job id"));
     }
 
-    const job = await jobService.getJobById(id);
+    const job = await jobService.getJobById(id, req.user.id);
     if (!job) {
       return res.status(404).json(errorResponse("Job not found"));
     }
@@ -208,13 +221,14 @@ const activateJob = async (req, res) => {
       id,
       currentStatus: "REQUIREMENTS_STRUCTURED",
       nextStatus: "ACTIVE",
+      userId: req.user.id,
     });
 
     if (!activated) {
       return res.status(409).json(errorResponse("Job status changed, please retry"));
     }
 
-    const refreshed = await jobService.getJobById(id);
+    const refreshed = await jobService.getJobById(id, req.user.id);
     return res.status(200).json(successResponse(refreshed));
   } catch (error) {
     return handleControllerError(res, error, "Failed to activate job");
@@ -222,6 +236,7 @@ const activateJob = async (req, res) => {
 };
 
 const jobController = {
+  getJobs,
   createJob,
   extractRequirements,
   patchRequirements,
