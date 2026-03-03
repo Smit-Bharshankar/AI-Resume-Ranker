@@ -19,7 +19,17 @@ for (const error of aiConfigHealth.errors) {
   logger.error("AI config error", { error });
 }
 
-app.use(cors());
+
+const allowedOrigins = [
+  'http://localhost:5173', // Local development
+  'https://ai-recruiter-assistant.smitxcode.in/' // Your actual frontend URL
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
 app.use(express.json());
 
 app.get("/health", (req, res) => {
