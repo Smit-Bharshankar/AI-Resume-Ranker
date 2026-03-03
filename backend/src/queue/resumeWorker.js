@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+import { fileURLToPath } from "url";
 import { connection } from "./resumeQueue.js";
 import env from "../config/env.js";
 import resumeService from "../modules/resume/resume.service.js";
@@ -228,58 +229,53 @@ const processResumeJob = async (job) => {
   });
 };
 
-const worker = new Worker(env.resumeQueueName, processResumeJob, {
-  connection,
-  concurrency: env.resumeWorkerConcurrency,
-});
-
-const aiConfigHealth = validateAiConfiguration();
-for (const warning of aiConfigHealth.warnings) {
-  logger.warn("AI config warning", {
-    queue: env.resumeQueueName,
-    warning,
+const startResumeWorker = ({ concurrency = 1 } = {}) => {
+  const worker = new Worker(env.resumeQueueName, processResumeJob, {
+    connection,
+    concurrency,
   });
+
+  const aiConfigHealth = validateAiConfiguration();
+  for (const warning of aiConfigHealth.warnings) {
+    logger.warn("AI config warning", {
+      queue: env.resumeQueueName,
+      warning,
+    });
+  }
+  for (const error of aiConfigHealth.errors) {
+    logger.error("AI config error", {
+      queue: env.resumeQueueName,
+      error,
+    });
+  }
+
+  worker.on("error", (error) => {
+    logger.error("Worker encountered an error", {
+      queue: env.resumeQueueName,
+      error: error.message,
+    });
+  });
+
+  worker.on("failed", (job, error) => {
+    logger.error("Queue job failed", {
+      queue: env.resumeQueueName,
+      jobId: job?.id,
+      resumeId: job?.data?.resumeId,
+      attemptsMade: job?.attemptsMade,
+      error: error.message,
+    });
+  });
+
+  logger.info("Resume worker started", {
+    queue: env.resumeQueueName,
+    concurrency,
+  });
+
+  return worker;
+};
+
+export { processResumeJob, startResumeWorker };
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startResumeWorker({ concurrency: 1 });
 }
-for (const error of aiConfigHealth.errors) {
-  logger.error("AI config error", {
-    queue: env.resumeQueueName,
-    error,
-  });
-}
-
-worker.on("error", (error) => {
-  logger.error("Worker encountered an error", {
-    queue: env.resumeQueueName,
-    error: error.message,
-  });
-});
-
-worker.on("failed", (job, error) => {
-  logger.error("Queue job failed", {
-    queue: env.resumeQueueName,
-    jobId: job?.id,
-    resumeId: job?.data?.resumeId,
-    attemptsMade: job?.attemptsMade,
-    error: error.message,
-  });
-});
-
-logger.info("Resume worker started", {
-  queue: env.resumeQueueName,
-  concurrency: env.resumeWorkerConcurrency,
-});
-
-process.on("unhandledRejection", (error) => {
-  logger.error("Unhandled rejection in worker", {
-    queue: env.resumeQueueName,
-    error: error instanceof Error ? error.message : String(error),
-  });
-});
-
-process.on("uncaughtException", (error) => {
-  logger.error("Uncaught exception in worker", {
-    queue: env.resumeQueueName,
-    error: error.message,
-  });
-  process.exit(1);
-});

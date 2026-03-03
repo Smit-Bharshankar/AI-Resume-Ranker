@@ -9,6 +9,8 @@ import { validateAiConfiguration } from "./modules/ai/providers/provider.factory
 
 const app = express();
 const aiConfigHealth = validateAiConfiguration();
+const isProduction = process.env.NODE_ENV === "production";
+const workerInstances = [];
 
 for (const warning of aiConfigHealth.warnings) {
   logger.warn("AI config warning", { warning });
@@ -53,8 +55,32 @@ app.use((error, req, res, next) => {
   return res.status(500).json(errorResponse("Internal server error"));
 });
 
-const server = app.listen(env.port, () => {
-  logger.info("HTTP server started", { port: env.port, nodeEnv: env.nodeEnv });
+const port = Number(process.env.PORT) || 10000;
+
+if (isProduction) {
+  const [
+    { startResumeWorker },
+    { startInsightWorker },
+    { startJobExtractionWorker },
+  ] = await Promise.all([
+    import("./queue/resumeWorker.js"),
+    import("./queue/insightWorker.js"),
+    import("./queue/jobExtractionWorker.js"),
+  ]);
+
+  workerInstances.push(startResumeWorker({ concurrency: 1 }));
+  workerInstances.push(startInsightWorker({ concurrency: 1 }));
+  workerInstances.push(startJobExtractionWorker({ concurrency: 1 }));
+
+  logger.info("Inline BullMQ workers started", {
+    nodeEnv: env.nodeEnv,
+    workers: ["resume", "insight", "job-extraction"],
+    concurrency: 1,
+  });
+}
+
+const server = app.listen(port, () => {
+  logger.info("HTTP server started", { port, nodeEnv: env.nodeEnv });
 });
 
 process.on("unhandledRejection", (error) => {
@@ -68,4 +94,10 @@ process.on("uncaughtException", (error) => {
   server.close(() => {
     process.exit(1);
   });
+});
+
+process.on("SIGTERM", async () => {
+  logger.info("SIGTERM received, shutting down");
+  await Promise.allSettled(workerInstances.map((worker) => worker.close()));
+  server.close(() => process.exit(0));
 });

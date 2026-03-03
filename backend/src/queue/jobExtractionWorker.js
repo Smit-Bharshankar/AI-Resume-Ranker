@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+import { fileURLToPath } from "url";
 import env from "../config/env.js";
 import logger from "../utils/logger.js";
 import { connection } from "./resumeQueue.js";
@@ -54,44 +55,39 @@ const processJobExtraction = async (job) => {
   }
 };
 
-const worker = new Worker(env.jobExtractionQueueName, processJobExtraction, {
-  connection,
-  concurrency: env.jobExtractionWorkerConcurrency,
-});
-
-worker.on("error", (error) => {
-  logger.error("Job extraction worker encountered an error", {
-    queue: env.jobExtractionQueueName,
-    error: error.message,
+const startJobExtractionWorker = ({ concurrency = 1 } = {}) => {
+  const worker = new Worker(env.jobExtractionQueueName, processJobExtraction, {
+    connection,
+    concurrency,
   });
-});
 
-worker.on("failed", (job, error) => {
-  logger.error("Job extraction queue job failed", {
-    queue: env.jobExtractionQueueName,
-    queueJobId: job?.id,
-    jobId: job?.data?.jobId,
-    attemptsMade: job?.attemptsMade,
-    error: error.message,
+  worker.on("error", (error) => {
+    logger.error("Job extraction worker encountered an error", {
+      queue: env.jobExtractionQueueName,
+      error: error.message,
+    });
   });
-});
 
-logger.info("Job extraction worker started", {
-  queue: env.jobExtractionQueueName,
-  concurrency: env.jobExtractionWorkerConcurrency,
-});
-
-process.on("unhandledRejection", (error) => {
-  logger.error("Unhandled rejection in job extraction worker", {
-    queue: env.jobExtractionQueueName,
-    error: error instanceof Error ? error.message : String(error),
+  worker.on("failed", (job, error) => {
+    logger.error("Job extraction queue job failed", {
+      queue: env.jobExtractionQueueName,
+      queueJobId: job?.id,
+      jobId: job?.data?.jobId,
+      attemptsMade: job?.attemptsMade,
+      error: error.message,
+    });
   });
-});
 
-process.on("uncaughtException", (error) => {
-  logger.error("Uncaught exception in job extraction worker", {
+  logger.info("Job extraction worker started", {
     queue: env.jobExtractionQueueName,
-    error: error.message,
+    concurrency,
   });
-  process.exit(1);
-});
+
+  return worker;
+};
+
+export { processJobExtraction, startJobExtractionWorker };
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startJobExtractionWorker({ concurrency: 1 });
+}

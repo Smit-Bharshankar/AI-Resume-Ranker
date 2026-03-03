@@ -1,4 +1,5 @@
 import { Worker } from "bullmq";
+import { fileURLToPath } from "url";
 import env from "../config/env.js";
 import logger from "../utils/logger.js";
 import { connection } from "./resumeQueue.js";
@@ -42,44 +43,39 @@ const processInsightJob = async (job) => {
   }
 };
 
-const worker = new Worker(env.resumeInsightQueueName, processInsightJob, {
-  connection,
-  concurrency: env.resumeInsightWorkerConcurrency,
-});
-
-worker.on("error", (error) => {
-  logger.error("Insight worker encountered an error", {
-    queue: env.resumeInsightQueueName,
-    error: error.message,
+const startInsightWorker = ({ concurrency = 1 } = {}) => {
+  const worker = new Worker(env.resumeInsightQueueName, processInsightJob, {
+    connection,
+    concurrency,
   });
-});
 
-worker.on("failed", (job, error) => {
-  logger.error("Insight queue job failed", {
-    queue: env.resumeInsightQueueName,
-    queueJobId: job?.id,
-    resumeId: job?.data?.resumeId,
-    attemptsMade: job?.attemptsMade,
-    error: error.message,
+  worker.on("error", (error) => {
+    logger.error("Insight worker encountered an error", {
+      queue: env.resumeInsightQueueName,
+      error: error.message,
+    });
   });
-});
 
-logger.info("Insight worker started", {
-  queue: env.resumeInsightQueueName,
-  concurrency: env.resumeInsightWorkerConcurrency,
-});
-
-process.on("unhandledRejection", (error) => {
-  logger.error("Unhandled rejection in insight worker", {
-    queue: env.resumeInsightQueueName,
-    error: error instanceof Error ? error.message : String(error),
+  worker.on("failed", (job, error) => {
+    logger.error("Insight queue job failed", {
+      queue: env.resumeInsightQueueName,
+      queueJobId: job?.id,
+      resumeId: job?.data?.resumeId,
+      attemptsMade: job?.attemptsMade,
+      error: error.message,
+    });
   });
-});
 
-process.on("uncaughtException", (error) => {
-  logger.error("Uncaught exception in insight worker", {
+  logger.info("Insight worker started", {
     queue: env.resumeInsightQueueName,
-    error: error.message,
+    concurrency,
   });
-  process.exit(1);
-});
+
+  return worker;
+};
+
+export { processInsightJob, startInsightWorker };
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startInsightWorker({ concurrency: 1 });
+}

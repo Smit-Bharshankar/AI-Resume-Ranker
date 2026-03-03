@@ -8,38 +8,15 @@ const redisConnectionOptions = {
   enableReadyCheck: false,
 };
 
-const isUsableRedisUrl = (value) => {
-  if (!value) {
-    return false;
-  }
+const redisUrl = process.env.REDIS_URL ?? env.redisUrl;
 
-  try {
-    const parsed = new URL(value);
-    if (!parsed.hostname || parsed.hostname.toLowerCase() === "host") {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-const connection = isUsableRedisUrl(env.redisUrl)
-  ? new IORedis(env.redisUrl, redisConnectionOptions)
-  : new IORedis({
-      host: env.redisHost,
-      port: env.redisPort,
-      username: env.redisUsername,
-      password: env.redisPassword,
-      ...(env.redisUseTls ? { tls: {} } : {}),
-      ...redisConnectionOptions,
-    });
-
-if (env.redisUrl && !isUsableRedisUrl(env.redisUrl)) {
-  logger.warn("Ignoring invalid REDIS_URL, using REDIS_HOST/PORT settings", {
+if (!redisUrl) {
+  logger.warn("REDIS_URL is not configured; falling back to local Redis", {
     queue: env.resumeQueueName,
   });
 }
+
+const connection = new IORedis(redisUrl || "redis://127.0.0.1:6379", redisConnectionOptions);
 
 const resumeQueue = new Queue(env.resumeQueueName, {
   connection,
