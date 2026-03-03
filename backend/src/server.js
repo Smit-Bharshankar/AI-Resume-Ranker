@@ -22,7 +22,7 @@ for (const error of aiConfigHealth.errors) {
 
 const allowedOrigins = [
   'http://localhost:5173', // Local development
-  'https://ai-recruiter-assistant.smitxcode.in/' // Your actual frontend URL
+  'https://ai-recruiter-assistant.smitxcode.in' // Your actual frontend URL
 ];
 
 app.use(cors({
