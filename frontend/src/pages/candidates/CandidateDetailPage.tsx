@@ -89,6 +89,7 @@ export function CandidateDetailPage() {
 
       <CandidateProfileHeader
         candidateId={resume.id}
+        candidateName={resume.structuredData?.name}
         jobTitle={jobQuery.data?.title}
         score={resume.score}
         status={resume.status}

@@ -8,6 +8,7 @@ import { CandidateStatusBadge } from "./CandidateStatusBadge";
 
 type CandidateProfileHeaderProps = {
   candidateId: string;
+  candidateName?: string;
   jobTitle?: string;
   score?: number;
   status: ResumeStatus;
@@ -45,6 +46,7 @@ const toRecommendationLabel = (
 
 function CandidateProfileHeaderComponent({
   candidateId,
+  candidateName,
   jobTitle,
   score,
   status,
@@ -52,12 +54,15 @@ function CandidateProfileHeaderComponent({
   className,
 }: CandidateProfileHeaderProps) {
   const isProcessing = isResumeProcessingStatus(status);
+  const displayName =
+    candidateName && candidateName.trim().length > 0 ? candidateName.trim() : candidateId;
 
   return (
     <Card className={className}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">{candidateId}</h1>
+          <h1 className="text-2xl font-bold text-slate-900">{displayName}</h1>
+          <p className="text-xs text-slate-500">Candidate ID: {candidateId}</p>
           <p className="text-sm text-slate-600">
             {jobTitle && jobTitle.trim().length > 0 ? jobTitle : "Job title unavailable"}
           </p>

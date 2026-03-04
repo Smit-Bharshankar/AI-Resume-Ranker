@@ -21,17 +21,9 @@ const normalizeText = (rawText) => {
 const enqueueInsightsPipeline = async ({ resumeId, jobLogger }) => {
   await enqueueResumeInsightGeneration({ resumeId });
 
-  const transitioned = await resumeService.startInsightsGeneration(resumeId);
-  if (!transitioned) {
-    jobLogger.warn("Skipped insights transition due to concurrent status update", {
-      stage: "insights_enqueue",
-    });
-    return;
-  }
-
   jobLogger.info("Resume insights generation enqueued", {
     stage: "insights_enqueue",
-    nextStatus: "INSIGHTS_GENERATING",
+    nextStatus: "SCORED",
   });
 };
 

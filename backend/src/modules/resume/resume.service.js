@@ -1,4 +1,5 @@
 import resumeRepository from "./resume.repository.js";
+import supabaseStorage from "../../storage/supabaseStorage.js";
 
 const createResume = async ({
   jobId,
@@ -82,6 +83,27 @@ const getResumesByJob = async (jobId, userId) => {
   return resumeRepository.getResumesByJob(jobId, userId);
 };
 
+const getResumeSignedFileUrl = async ({
+  resumeId,
+  userId,
+  expiresInSeconds = 900,
+}) => {
+  const resume = await resumeRepository.getResumeById(resumeId, userId);
+  if (!resume || !resume.storagePath) {
+    return null;
+  }
+
+  const url = await supabaseStorage.createSignedResumeUrl(
+    resume.storagePath,
+    expiresInSeconds,
+  );
+
+  return {
+    url,
+    expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+  };
+};
+
 const resumeService = {
   createResume,
   updateStatus,
@@ -99,6 +121,7 @@ const resumeService = {
   markInsightsFailed,
   deleteResume,
   getResumesByJob,
+  getResumeSignedFileUrl,
 };
 
 export default resumeService;

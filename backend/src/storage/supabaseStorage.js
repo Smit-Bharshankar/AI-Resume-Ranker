@@ -84,10 +84,30 @@ const removeResume = async (storagePath) => {
   }
 };
 
+const createSignedResumeUrl = async (storagePath, expiresInSeconds = 900) => {
+  try {
+    const { data, error } = await supabase.storage
+      .from(env.supabaseStorageBucket)
+      .createSignedUrl(storagePath, expiresInSeconds);
+
+    if (error) {
+      throw error;
+    }
+
+    return data.signedUrl;
+  } catch (error) {
+    throw buildStorageError("createSignedUrl", error, {
+      storagePath,
+      expiresInSeconds,
+    });
+  }
+};
+
 const supabaseStorage = {
   uploadResume,
   downloadResume,
   removeResume,
+  createSignedResumeUrl,
 };
 
 export default supabaseStorage;

@@ -24,8 +24,32 @@ const getResumeById = async (req, res) => {
   }
 };
 
+const getResumeFileById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!UUID_V4_REGEX.test(id)) {
+      return res.status(400).json(errorResponse("Invalid resume id"));
+    }
+
+    const signedFile = await resumeService.getResumeSignedFileUrl({
+      resumeId: id,
+      userId: req.user.id,
+    });
+
+    if (!signedFile) {
+      return res.status(404).json(errorResponse("Resume file not found"));
+    }
+
+    return res.status(200).json(successResponse(signedFile));
+  } catch (error) {
+    return handleControllerError(res, error, "Failed to fetch resume file");
+  }
+};
+
 const resumeController = {
   getResumeById,
+  getResumeFileById,
 };
 
 export default resumeController;

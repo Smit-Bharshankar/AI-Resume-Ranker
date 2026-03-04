@@ -120,7 +120,7 @@ const process = async (resumeId) => {
     return { status: "skipped" };
   }
 
-  const resume = await resumeService.getResumeById(resumeId);
+  let resume = await resumeService.getResumeById(resumeId);
   if (!resume) {
     serviceLogger.warn("Skipping resume insights for missing resume");
     return { status: "skipped" };
@@ -139,8 +139,17 @@ const process = async (resumeId) => {
   if (resume.status === "SCORED") {
     const started = await resumeService.startInsightsGeneration(resumeId);
     if (!started) {
-      scopedLogger.warn("Skipped resume insights start due to concurrent status update");
-      return { status: "skipped" };
+      const refreshedResume = await resumeService.getResumeById(resumeId);
+
+      if (!refreshedResume || refreshedResume.status !== "INSIGHTS_GENERATING") {
+        scopedLogger.warn("Skipped resume insights start due to concurrent status update");
+        return { status: "skipped" };
+      }
+
+      resume = refreshedResume;
+      scopedLogger.info(
+        "Resuming insight generation after concurrent status transition",
+      );
     }
   }
 
