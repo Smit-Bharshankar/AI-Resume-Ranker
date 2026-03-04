@@ -1,10 +1,12 @@
+import { memo } from "react";
 import { Insights } from "../../types/insights";
 import { Badge } from "../ui/Badge";
-import { Card } from "../ui/Card";
+import { InsightSection } from "./InsightSection";
 
 type InsightRecommendationProps = {
   insights?: Insights;
   isGenerating?: boolean;
+  className?: string;
 };
 
 const getTone = (
@@ -25,33 +27,48 @@ const getTone = (
   return "danger";
 };
 
-export function InsightRecommendation({
+const toDisplayRecommendation = (
+  recommendation: Insights["recommendation"] | undefined
+): string => {
+  if (!recommendation) {
+    return "";
+  }
+
+  if (recommendation === "STRONG_FIT") {
+    return "Strong Fit";
+  }
+
+  if (recommendation === "GOOD_FIT") {
+    return "Good Fit";
+  }
+
+  if (recommendation === "MODERATE_FIT") {
+    return "Moderate Fit";
+  }
+
+  return "Weak Fit";
+};
+
+function InsightRecommendationComponent({
   insights,
   isGenerating = false,
+  className,
 }: InsightRecommendationProps) {
-  if (isGenerating) {
-    return (
-      <Card>
-        <p className="text-sm text-slate-600">Generating recommendation...</p>
-      </Card>
-    );
-  }
-
   const recommendation = insights?.recommendation;
-  if (!recommendation) {
-    return (
-      <Card>
-        <p className="text-sm text-slate-600">
-          Recommendation will appear once insights are ready.
-        </p>
-      </Card>
-    );
-  }
+  const displayRecommendation = toDisplayRecommendation(recommendation);
 
   return (
-    <Card className="space-y-2">
-      <h3 className="text-lg font-semibold text-slate-900">Recommendation</h3>
-      <Badge tone={getTone(recommendation)}>{recommendation.replace(/_/g, " ")}</Badge>
-    </Card>
+    <InsightSection
+      title="Recommendation"
+      isGenerating={isGenerating}
+      generatingLabel="Generating recommendation..."
+      emptyLabel="Recommendation will appear once insights are ready."
+      hasContent={displayRecommendation.length > 0}
+      className={className}
+    >
+      <Badge tone={getTone(recommendation)}>{displayRecommendation}</Badge>
+    </InsightSection>
   );
 }
+
+export const InsightRecommendation = memo(InsightRecommendationComponent);

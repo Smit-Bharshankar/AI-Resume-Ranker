@@ -1,12 +1,19 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "../components/auth/ProtectedRoute";
+import { Loader } from "../components/common/Loader";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { SignupPage } from "../pages/auth/SignupPage";
-import { CandidateDetailPage } from "../pages/candidates/CandidateDetailPage";
 import { CandidatesListPage } from "../pages/candidates/CandidatesListPage";
 import { CreateJobPage } from "../pages/jobs/CreateJobPage";
 import { JobDetailPage } from "../pages/jobs/JobDetailPage";
 import { JobsListPage } from "../pages/jobs/JobsListPage";
+
+const CandidateDetailPage = lazy(() =>
+  import("../pages/candidates/CandidateDetailPage").then((module) => ({
+    default: module.CandidateDetailPage,
+  }))
+);
 
 export const router = createBrowserRouter([
   {
@@ -57,7 +64,9 @@ export const router = createBrowserRouter([
     path: "/candidates/:resumeId",
     element: (
       <ProtectedRoute>
-        <CandidateDetailPage />
+        <Suspense fallback={<div className="mx-auto max-w-6xl p-6"><Loader label="Loading candidate page..." /></div>}>
+          <CandidateDetailPage />
+        </Suspense>
       </ProtectedRoute>
     ),
   },

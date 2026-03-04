@@ -1,35 +1,32 @@
+import { memo } from "react";
 import { Insights } from "../../types/insights";
-import { Card } from "../ui/Card";
+import { InsightSection } from "./InsightSection";
 
 type InsightSummaryProps = {
   insights?: Insights;
   isGenerating?: boolean;
+  className?: string;
 };
 
-export function InsightSummary({
+function InsightSummaryComponent({
   insights,
   isGenerating = false,
+  className,
 }: InsightSummaryProps) {
-  if (isGenerating) {
-    return (
-      <Card>
-        <p className="text-sm text-slate-600">Generating insight summary...</p>
-      </Card>
-    );
-  }
-
-  if (!insights?.summary) {
-    return (
-      <Card>
-        <p className="text-sm text-slate-600">Summary will appear once insights are ready.</p>
-      </Card>
-    );
-  }
+  const summary = insights?.summary?.trim() ?? "";
 
   return (
-    <Card className="space-y-2">
-      <h3 className="text-lg font-semibold text-slate-900">Summary</h3>
-      <p className="text-sm text-slate-700">{insights.summary}</p>
-    </Card>
+    <InsightSection
+      title="Summary"
+      isGenerating={isGenerating}
+      generatingLabel="Generating candidate summary..."
+      emptyLabel="Summary will appear once insights are ready."
+      hasContent={summary.length > 0}
+      className={className}
+    >
+      <p className="text-sm text-slate-700">{summary}</p>
+    </InsightSection>
   );
 }
+
+export const InsightSummary = memo(InsightSummaryComponent);

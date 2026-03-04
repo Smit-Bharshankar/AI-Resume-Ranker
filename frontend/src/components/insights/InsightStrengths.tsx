@@ -1,25 +1,38 @@
+import { memo } from "react";
 import { Insights } from "../../types/insights";
-import { Card } from "../ui/Card";
+import { InsightSection } from "./InsightSection";
 
 type InsightStrengthsProps = {
   insights?: Insights;
+  isGenerating?: boolean;
+  className?: string;
 };
 
-export function InsightStrengths({ insights }: InsightStrengthsProps) {
-  const strengths = insights?.strengths ?? [];
+function InsightStrengthsComponent({
+  insights,
+  isGenerating = false,
+  className,
+}: InsightStrengthsProps) {
+  const strengths = (insights?.strengths ?? []).filter(
+    (strength) => strength.trim().length > 0
+  );
 
   return (
-    <Card className="space-y-2">
-      <h3 className="text-lg font-semibold text-slate-900">Strengths</h3>
-      {strengths.length === 0 ? (
-        <p className="text-sm text-slate-600">No strengths available yet.</p>
-      ) : (
-        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-          {strengths.map((strength, index) => (
-            <li key={`${strength}-${index}`}>{strength}</li>
-          ))}
-        </ul>
-      )}
-    </Card>
+    <InsightSection
+      title="Strengths"
+      isGenerating={isGenerating}
+      generatingLabel="Generating strengths..."
+      emptyLabel="No strengths available yet."
+      hasContent={strengths.length > 0}
+      className={className}
+    >
+      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+        {strengths.map((strength, index) => (
+          <li key={`${strength}-${index}`}>{strength}</li>
+        ))}
+      </ul>
+    </InsightSection>
   );
 }
+
+export const InsightStrengths = memo(InsightStrengthsComponent);

@@ -1,19 +1,48 @@
+import { memo } from "react";
 import { ScoreBreakdown as ScoreBreakdownType } from "../../types/resume";
 import { Card } from "../ui/Card";
 
 type ScoreBreakdownProps = {
   scoreBreakdown?: ScoreBreakdownType;
+  isGenerating?: boolean;
+  className?: string;
 };
 
-const toPercent = (value: number): string => `${Math.round(value * 100)}%`;
+type BreakdownItemProps = {
+  label: string;
+  value: string;
+};
 
-export function ScoreBreakdown({ scoreBreakdown }: ScoreBreakdownProps) {
+const toPercent = (value: number): string =>
+  `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`;
+
+function BreakdownItem({ label, value }: BreakdownItemProps) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-sm text-slate-800">{value}</p>
+    </div>
+  );
+}
+
+function ScoreBreakdownComponent({
+  scoreBreakdown,
+  isGenerating = false,
+  className,
+}: ScoreBreakdownProps) {
   if (!scoreBreakdown) {
     return (
-      <Card>
-        <p className="text-sm text-slate-600">
-          Score breakdown will appear when candidate scoring is completed.
-        </p>
+      <Card className={className}>
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold text-slate-900">Score Breakdown</h3>
+          <p className="text-sm text-slate-600">
+            {isGenerating
+              ? "Score breakdown is being generated and will appear automatically."
+              : "Score breakdown will appear when candidate scoring is completed."}
+          </p>
+        </div>
       </Card>
     );
   }
@@ -28,44 +57,34 @@ export function ScoreBreakdown({ scoreBreakdown }: ScoreBreakdownProps) {
       : 0;
 
   return (
-    <Card className="space-y-4">
+    <Card className={className}>
+      <div className="space-y-4">
       <h3 className="text-lg font-semibold text-slate-900">Score Breakdown</h3>
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-md bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Required Skills
-          </p>
-          <p className="mt-1 text-sm text-slate-800">
-            {scoreBreakdown.required.matched}/{scoreBreakdown.required.total} matched (
-            {toPercent(requiredRatio)})
-          </p>
-        </div>
-        <div className="rounded-md bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Preferred Skills
-          </p>
-          <p className="mt-1 text-sm text-slate-800">
-            {scoreBreakdown.preferred.matched}/{scoreBreakdown.preferred.total} matched (
-            {toPercent(preferredRatio)})
-          </p>
-        </div>
-        <div className="rounded-md bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Experience Score
-          </p>
-          <p className="mt-1 text-sm text-slate-800">
-            {toPercent(scoreBreakdown.experience.score)} (
-            {scoreBreakdown.experience.candidate_years} yrs / required{" "}
-            {scoreBreakdown.experience.required_years} yrs)
-          </p>
-        </div>
-        <div className="rounded-md bg-slate-50 p-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-            Final Score
-          </p>
-          <p className="mt-1 text-sm text-slate-800">{scoreBreakdown.final_score}</p>
-        </div>
+        <BreakdownItem
+          label="Required Skills Score"
+          value={`${scoreBreakdown.required.matched}/${scoreBreakdown.required.total} matched (${toPercent(
+            requiredRatio
+          )})`}
+        />
+        <BreakdownItem
+          label="Preferred Skills Score"
+          value={`${scoreBreakdown.preferred.matched}/${scoreBreakdown.preferred.total} matched (${toPercent(
+            preferredRatio
+          )})`}
+        />
+        <BreakdownItem
+          label="Experience Score"
+          value={`${toPercent(scoreBreakdown.experience.score)} (${scoreBreakdown.experience.candidate_years} yrs / required ${scoreBreakdown.experience.required_years} yrs)`}
+        />
+        <BreakdownItem
+          label="Final Score"
+          value={`${Math.round(scoreBreakdown.final_score)} / 100`}
+        />
+      </div>
       </div>
     </Card>
   );
 }
+
+export const ScoreBreakdown = memo(ScoreBreakdownComponent);

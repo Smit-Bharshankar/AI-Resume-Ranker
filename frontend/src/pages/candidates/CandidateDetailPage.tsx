@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
+import { CandidateProfileHeader } from "../../components/candidates/CandidateProfileHeader";
+import { CandidateSkillsMatch } from "../../components/candidates/CandidateSkillsMatch";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
-import { CandidateStatusBadge } from "../../components/candidates/CandidateStatusBadge";
 import { InsightInterviewQuestions } from "../../components/insights/InsightInterviewQuestions";
 import { InsightRecommendation } from "../../components/insights/InsightRecommendation";
 import { InsightStrengths } from "../../components/insights/InsightStrengths";
@@ -11,44 +12,33 @@ import { InsightWeaknesses } from "../../components/insights/InsightWeaknesses";
 import { ScoreBreakdown } from "../../components/scoring/ScoreBreakdown";
 import { ScoreDisplay } from "../../components/scoring/ScoreDisplay";
 import { Card } from "../../components/ui/Card";
-import { useResume } from "../../hooks/resumes/useResume";
-import { useResumePolling } from "../../hooks/resumes/useResumePolling";
+import { useJob } from "../../hooks/jobs/useJob";
+import { useCandidateResumeDetail } from "../../hooks/resumes/useCandidateResumeDetail";
 import {
   isResumeFailedStatus,
-  shouldPollResumeStatus,
+  isResumeProcessingStatus,
 } from "../../utils/resumeStatusUtils";
 
-const toDisplayName = (name: string | undefined, fallbackId: string): string => {
-  const trimmed = name?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : fallbackId;
-};
+const ResumeViewer = lazy(() =>
+  import("../../components/resume/ResumeViewer").then((module) => ({
+    default: module.ResumeViewer,
+  }))
+);
 
 export function CandidateDetailPage() {
   const { resumeId } = useParams<{ resumeId: string }>();
   const safeResumeId = resumeId ?? "";
-  const [forcePolling, setForcePolling] = useState<boolean>(false);
 
-  const resumeQuery = useResume(safeResumeId);
-  const shouldPollFromStatus = useMemo(() => {
-    if (!resumeQuery.data) {
-      return false;
-    }
-    return shouldPollResumeStatus(resumeQuery.data.status);
-  }, [resumeQuery.data]);
-  const pollingQuery = useResumePolling(
-    safeResumeId,
-    forcePolling || shouldPollFromStatus
+  const resumeQuery = useCandidateResumeDetail(safeResumeId);
+  const resume = resumeQuery.data;
+  const jobQuery = useJob(resume?.jobId ?? "");
+
+  const isProcessing = useMemo(
+    () => (resume ? isResumeProcessingStatus(resume.status) : false),
+    [resume]
   );
-
-  const resume = pollingQuery.data ?? resumeQuery.data;
   const isInsightsGenerating = resume?.status === "INSIGHTS_GENERATING";
   const isFailed = resume ? isResumeFailedStatus(resume.status) : false;
-
-  useEffect(() => {
-    if (resume && !shouldPollResumeStatus(resume.status)) {
-      setForcePolling(false);
-    }
-  }, [resume]);
 
   if (!resumeId) {
     return (
@@ -91,23 +81,23 @@ export function CandidateDetailPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between gap-4">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">
-            {toDisplayName(resume.structuredData?.name, resume.id)}
-          </h1>
-          <div className="flex items-center gap-3">
-            <CandidateStatusBadge status={resume.status} />
-            <span className="text-sm text-slate-600">Resume ID: {resume.id}</span>
-          </div>
-        </div>
+        <h1 className="text-2xl font-bold text-slate-900">Candidate Profile</h1>
         <Link className="text-sm text-slate-600 underline" to={`/jobs/${resume.jobId}/candidates`}>
           Back to Candidates
         </Link>
       </div>
 
-      {shouldPollResumeStatus(resume.status) ? (
+      <CandidateProfileHeader
+        candidateId={resume.id}
+        jobTitle={jobQuery.data?.title}
+        score={resume.score}
+        status={resume.status}
+        recommendation={resume.insights?.recommendation}
+      />
+
+      {isProcessing ? (
         <Card>
-          <Loader label="Candidate is processing. Refreshing every 2 seconds..." />
+          <Loader label="Candidate processing in progress. Refreshing every 2 seconds..." />
         </Card>
       ) : null}
 
@@ -118,31 +108,63 @@ export function CandidateDetailPage() {
         />
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ScoreDisplay score={resume.score} />
-        <InsightRecommendation
-          insights={resume.insights}
-          isGenerating={isInsightsGenerating}
-        />
-      </div>
-
-      <ScoreBreakdown scoreBreakdown={resume.scoreBreakdown} />
-
-      <InsightSummary insights={resume.insights} isGenerating={isInsightsGenerating} />
-      <InsightStrengths insights={resume.insights} />
-      <InsightWeaknesses insights={resume.insights} />
-      <InsightInterviewQuestions insights={resume.insights} />
-
-      {pollingQuery.isError ? (
+      {jobQuery.isError ? (
         <ErrorState
-          title="Polling interrupted"
-          message={pollingQuery.error.message}
+          title="Failed to load job details"
+          message={jobQuery.error.message}
           onRetry={() => {
-            setForcePolling(true);
-            void pollingQuery.refetch();
+            void jobQuery.refetch();
           }}
         />
       ) : null}
+
+      {resumeQuery.isError && resume ? (
+        <ErrorState
+          title="Live refresh interrupted"
+          message={resumeQuery.error.message}
+          onRetry={() => {
+            void resumeQuery.refetch();
+          }}
+        />
+      ) : null}
+
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <Suspense
+            fallback={
+              <Card>
+                <Loader label="Loading resume viewer..." />
+              </Card>
+            }
+          >
+            <ResumeViewer resumeId={resume.id} />
+          </Suspense>
+        </div>
+
+        <div className="space-y-4 lg:col-span-2">
+          <ScoreDisplay score={resume.score} isGenerating={isProcessing} />
+          <ScoreBreakdown
+            scoreBreakdown={resume.scoreBreakdown}
+            isGenerating={isProcessing}
+          />
+          <InsightSummary insights={resume.insights} isGenerating={isInsightsGenerating} />
+          <InsightStrengths insights={resume.insights} isGenerating={isInsightsGenerating} />
+          <InsightWeaknesses insights={resume.insights} isGenerating={isInsightsGenerating} />
+          <InsightInterviewQuestions
+            insights={resume.insights}
+            isGenerating={isInsightsGenerating}
+          />
+          <InsightRecommendation
+            insights={resume.insights}
+            isGenerating={isInsightsGenerating}
+          />
+          <CandidateSkillsMatch
+            requiredSkills={jobQuery.data?.structuredRequirements?.required_skills}
+            candidateSkills={resume.structuredData?.skills}
+            isGenerating={isProcessing || jobQuery.isLoading}
+          />
+        </div>
+      </div>
     </div>
   );
 }

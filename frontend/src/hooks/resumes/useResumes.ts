@@ -8,6 +8,8 @@ export const resumeQueryKeys = {
   byJob: (jobId: string) => [...resumeQueryKeys.all, "job", jobId] as const,
   detail: (resumeId: string) =>
     [...resumeQueryKeys.all, "detail", resumeId] as const,
+  file: (resumeId: string) =>
+    [...resumeQueryKeys.all, "file", resumeId] as const,
 };
 
 export const useResumes = (jobId: string) => {

@@ -1,27 +1,38 @@
+import { memo } from "react";
 import { Insights } from "../../types/insights";
-import { Card } from "../ui/Card";
+import { InsightSection } from "./InsightSection";
 
 type InsightInterviewQuestionsProps = {
   insights?: Insights;
+  isGenerating?: boolean;
+  className?: string;
 };
 
-export function InsightInterviewQuestions({
+function InsightInterviewQuestionsComponent({
   insights,
+  isGenerating = false,
+  className,
 }: InsightInterviewQuestionsProps) {
-  const interviewQuestions = insights?.interview_questions ?? [];
+  const interviewQuestions = (insights?.interview_questions ?? []).filter(
+    (question) => question.trim().length > 0
+  );
 
   return (
-    <Card className="space-y-2">
-      <h3 className="text-lg font-semibold text-slate-900">Interview Questions</h3>
-      {interviewQuestions.length === 0 ? (
-        <p className="text-sm text-slate-600">No interview questions available yet.</p>
-      ) : (
-        <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
-          {interviewQuestions.map((question, index) => (
-            <li key={`${question}-${index}`}>{question}</li>
-          ))}
-        </ol>
-      )}
-    </Card>
+    <InsightSection
+      title="Interview Questions"
+      isGenerating={isGenerating}
+      generatingLabel="Generating interview questions..."
+      emptyLabel="No interview questions available yet."
+      hasContent={interviewQuestions.length > 0}
+      className={className}
+    >
+      <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
+        {interviewQuestions.map((question, index) => (
+          <li key={`${question}-${index}`}>{question}</li>
+        ))}
+      </ol>
+    </InsightSection>
   );
 }
+
+export const InsightInterviewQuestions = memo(InsightInterviewQuestionsComponent);

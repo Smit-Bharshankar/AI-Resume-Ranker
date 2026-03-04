@@ -63,6 +63,7 @@ export type Resume = {
   scoreBreakdown?: ScoreBreakdown;
   insights?: Insights;
   structuredData?: ResumeStructuredData;
+  storagePath?: string;
   createdAt?: string;
   updatedAt?: string;
 };

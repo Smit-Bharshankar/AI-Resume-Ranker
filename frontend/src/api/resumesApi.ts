@@ -1,6 +1,7 @@
 import { AxiosProgressEvent, AxiosResponse } from "axios";
 import { ApiClientError, axiosClient, parseApiResponse } from "./axiosClient";
 import { Resume } from "../types/resume";
+import { ResumeFileUrl } from "../types/candidate";
 
 export type UploadResumesResult = {
   uploaded: number;
@@ -105,6 +106,76 @@ const parseUploadResponse = (payload: unknown): UploadResumesResult => {
   });
 };
 
+const getOptionalStringProperty = (
+  payload: Record<string, unknown>,
+  key: string
+): string | undefined => {
+  const value = payload[key];
+  return typeof value === "string" ? value : undefined;
+};
+
+const isResumeFileUrlShape = (payload: unknown): payload is ResumeFileUrl => {
+  if (typeof payload !== "object" || payload === null) {
+    return false;
+  }
+
+  const candidate = payload as Partial<ResumeFileUrl>;
+  return typeof candidate.url === "string";
+};
+
+const parseResumeFileUrlResponse = (payload: unknown): ResumeFileUrl => {
+  if (isResumeFileUrlShape(payload)) {
+    return payload;
+  }
+
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "url" in payload &&
+    typeof (payload as { url: unknown }).url === "string"
+  ) {
+    const payloadRecord = payload as Record<string, unknown>;
+    return {
+      url: (payload as { url: string }).url,
+      expiresAt: getOptionalStringProperty(payloadRecord, "expiresAt"),
+    };
+  }
+
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "signedUrl" in payload &&
+    typeof (payload as { signedUrl: unknown }).signedUrl === "string"
+  ) {
+    const payloadRecord = payload as Record<string, unknown>;
+    return {
+      url: (payload as { signedUrl: string }).signedUrl,
+      expiresAt: getOptionalStringProperty(payloadRecord, "expiresAt"),
+    };
+  }
+
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "file" in payload &&
+    typeof (payload as { file: unknown }).file === "object" &&
+    (payload as { file: object }).file !== null &&
+    "url" in (payload as { file: { url?: unknown } }).file &&
+    typeof (payload as { file: { url: unknown } }).file.url === "string"
+  ) {
+    const fileRecord = (payload as { file: Record<string, unknown> }).file;
+    return {
+      url: fileRecord.url as string,
+      expiresAt: getOptionalStringProperty(fileRecord, "expiresAt"),
+    };
+  }
+
+  throw new ApiClientError({
+    message:
+      "Invalid resume file response format from API. Expected a signed URL payload.",
+  });
+};
+
 const toProgressPercent = (event: AxiosProgressEvent): number => {
   if (!event.total || event.total <= 0 || typeof event.loaded !== "number") {
     return 0;
@@ -122,6 +193,13 @@ export const getResumes = async (jobId: string): Promise<Resume[]> => {
 export const getResume = async (resumeId: string): Promise<Resume> => {
   const payload = await request<unknown>(axiosClient.get<unknown>(`/resumes/${resumeId}`));
   return parseResumeDetailResponse(payload);
+};
+
+export const getResumeFileUrl = async (resumeId: string): Promise<ResumeFileUrl> => {
+  const payload = await request<unknown>(
+    axiosClient.get<unknown>(`/resumes/${resumeId}/file`)
+  );
+  return parseResumeFileUrlResponse(payload);
 };
 
 export const uploadResumes = async (
