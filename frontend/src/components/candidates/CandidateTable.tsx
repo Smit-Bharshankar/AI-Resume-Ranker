@@ -1,13 +1,19 @@
-import { Resume } from "../../types/resume";
+import { CandidateStage, Resume } from "../../types/resume";
 import { EmptyState } from "../common/EmptyState";
 import { Card } from "../ui/Card";
 import { CandidateRow } from "./CandidateRow";
 
 type CandidateTableProps = {
   resumes: Resume[];
+  onStageChange: (resumeId: string, stage: CandidateStage) => void;
+  updatingResumeId?: string;
 };
 
-export function CandidateTable({ resumes }: CandidateTableProps) {
+export function CandidateTable({
+  resumes,
+  onStageChange,
+  updatingResumeId,
+}: CandidateTableProps) {
   if (resumes.length === 0) {
     return (
       <EmptyState
@@ -34,6 +40,9 @@ export function CandidateTable({ resumes }: CandidateTableProps) {
             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
               Recommendation
             </th>
+            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              Stage
+            </th>
             <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-600">
               Actions
             </th>
@@ -41,7 +50,12 @@ export function CandidateTable({ resumes }: CandidateTableProps) {
         </thead>
         <tbody>
           {resumes.map((resume) => (
-            <CandidateRow key={resume.id} resume={resume} />
+            <CandidateRow
+              key={resume.id}
+              resume={resume}
+              onStageChange={onStageChange}
+              isStageUpdating={updatingResumeId === resume.id}
+            />
           ))}
         </tbody>
       </table>

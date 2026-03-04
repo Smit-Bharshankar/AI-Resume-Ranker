@@ -1,4 +1,5 @@
 import resumeService from "./resume.service.js";
+import stageService, { StageServiceError } from "./stage.service.js";
 import { successResponse, errorResponse } from "../../utils/api-response.js";
 import { handleControllerError } from "../../utils/error-handler.js";
 
@@ -47,9 +48,39 @@ const getResumeFileById = async (req, res) => {
   }
 };
 
+const patchResumeStage = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+    const { stage } = req.body ?? {};
+
+    if (!UUID_V4_REGEX.test(resumeId)) {
+      return res.status(400).json(errorResponse("Invalid resume id"));
+    }
+
+    if (typeof stage !== "string" || !stage.trim()) {
+      return res.status(400).json(errorResponse("stage is required"));
+    }
+
+    const updated = await stageService.updateResumeStage({
+      resumeId,
+      userId: req.user.id,
+      stage: stage.trim(),
+    });
+
+    return res.status(200).json(successResponse(updated));
+  } catch (error) {
+    if (error instanceof StageServiceError) {
+      return res.status(error.statusCode).json(errorResponse(error.message));
+    }
+
+    return handleControllerError(res, error, "Failed to update resume stage");
+  }
+};
+
 const resumeController = {
   getResumeById,
   getResumeFileById,
+  patchResumeStage,
 };
 
 export default resumeController;

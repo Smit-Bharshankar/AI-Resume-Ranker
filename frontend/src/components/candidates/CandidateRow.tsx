@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
-import { Resume } from "../../types/resume";
+import { CandidateStage, Resume } from "../../types/resume";
 import { Button } from "../ui/Button";
 import { CandidateStatusBadge } from "./CandidateStatusBadge";
+import { CandidateStageSelector } from "../workflow/CandidateStageSelector";
 
 type CandidateRowProps = {
   resume: Resume;
+  onStageChange: (resumeId: string, stage: CandidateStage) => void;
+  isStageUpdating?: boolean;
 };
 
 const toDisplayName = (resume: Resume): string => {
@@ -21,7 +24,11 @@ const toRecommendationLabel = (resume: Resume): string => {
   return recommendation ? recommendation.replace(/_/g, " ") : "-";
 };
 
-export function CandidateRow({ resume }: CandidateRowProps) {
+export function CandidateRow({
+  resume,
+  onStageChange,
+  isStageUpdating = false,
+}: CandidateRowProps) {
   return (
     <tr className="border-t border-slate-200">
       <td className="px-4 py-3 text-sm font-medium text-slate-900">{toDisplayName(resume)}</td>
@@ -30,6 +37,17 @@ export function CandidateRow({ resume }: CandidateRowProps) {
       </td>
       <td className="px-4 py-3 text-sm text-slate-700">{toScoreLabel(resume.score)}</td>
       <td className="px-4 py-3 text-sm text-slate-700">{toRecommendationLabel(resume)}</td>
+      <td className="px-4 py-3">
+        <CandidateStageSelector
+          value={resume.stage}
+          onChange={(stage) => {
+            onStageChange(resume.id, stage);
+          }}
+          isUpdating={isStageUpdating}
+          ariaLabel={`Stage for ${toDisplayName(resume)}`}
+          className="min-w-36"
+        />
+      </td>
       <td className="px-4 py-3 text-right">
         <Link to={`/candidates/${resume.id}`}>
           <Button variant="secondary">View Details</Button>

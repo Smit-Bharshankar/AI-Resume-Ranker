@@ -12,6 +12,13 @@ export type ResumeStatus =
   | "FAILED_SCORING"
   | "FAILED_INSIGHTS";
 
+export type CandidateStage =
+  | "NEW"
+  | "SHORTLISTED"
+  | "INTERVIEWING"
+  | "REJECTED"
+  | "HIRED";
+
 export type ScoreWeights = {
   required: number;
   preferred: number;
@@ -59,6 +66,7 @@ export type Resume = {
   id: string;
   jobId: string;
   status: ResumeStatus;
+  stage: CandidateStage;
   score?: number;
   scoreBreakdown?: ScoreBreakdown;
   insights?: Insights;

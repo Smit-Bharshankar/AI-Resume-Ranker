@@ -58,6 +58,13 @@ const updateStructuredData = async (id, structuredData) => {
   });
 };
 
+const updateResumeStage = async (id, stage) => {
+  return prisma.resume.update({
+    where: { id },
+    data: { stage },
+  });
+};
+
 const getResumeById = async (id, userId) => {
   return prisma.resume.findFirst({
     where: withJobUserScope({ id }, userId),
@@ -219,6 +226,7 @@ const resumeRepository = {
   updateStatus,
   updateRawText,
   updateStructuredData,
+  updateResumeStage,
   getResumeById,
   completeTextExtraction,
   markExtractionFailed,

@@ -14,6 +14,8 @@ import { ScoreDisplay } from "../../components/scoring/ScoreDisplay";
 import { Card } from "../../components/ui/Card";
 import { useJob } from "../../hooks/jobs/useJob";
 import { useCandidateResumeDetail } from "../../hooks/resumes/useCandidateResumeDetail";
+import { useUpdateCandidateStage } from "../../hooks/resumes/useUpdateCandidateStage";
+import { CandidateStage } from "../../types/resume";
 import {
   isResumeFailedStatus,
   isResumeProcessingStatus,
@@ -30,6 +32,7 @@ export function CandidateDetailPage() {
   const safeResumeId = resumeId ?? "";
 
   const resumeQuery = useCandidateResumeDetail(safeResumeId);
+  const updateCandidateStageMutation = useUpdateCandidateStage();
   const resume = resumeQuery.data;
   const jobQuery = useJob(resume?.jobId ?? "");
 
@@ -39,6 +42,17 @@ export function CandidateDetailPage() {
   );
   const isInsightsGenerating = resume?.status === "INSIGHTS_GENERATING";
   const isFailed = resume ? isResumeFailedStatus(resume.status) : false;
+
+  const handleStageChange = (stage: CandidateStage) => {
+    if (!resume) {
+      return;
+    }
+
+    updateCandidateStageMutation.mutate({
+      resumeId: resume.id,
+      stage,
+    });
+  };
 
   if (!resumeId) {
     return (
@@ -93,6 +107,12 @@ export function CandidateDetailPage() {
         jobTitle={jobQuery.data?.title}
         score={resume.score}
         status={resume.status}
+        stage={resume.stage}
+        onStageChange={handleStageChange}
+        isStageUpdating={
+          updateCandidateStageMutation.isPending &&
+          updateCandidateStageMutation.variables?.resumeId === resume.id
+        }
         recommendation={resume.insights?.recommendation}
       />
 

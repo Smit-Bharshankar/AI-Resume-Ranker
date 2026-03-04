@@ -1,6 +1,6 @@
 import { Insights } from "./insights";
 import { Job } from "./job";
-import { Resume, ResumeStatus, ScoreBreakdown } from "./resume";
+import { CandidateStage, Resume, ResumeStatus, ScoreBreakdown } from "./resume";
 
 export type CandidateStructuredData = Resume["structuredData"];
 
@@ -8,6 +8,7 @@ export type CandidateProfile = {
   id: string;
   jobId: string;
   status: ResumeStatus;
+  stage: CandidateStage;
   score?: number;
   scoreBreakdown?: ScoreBreakdown;
   insights?: Insights;

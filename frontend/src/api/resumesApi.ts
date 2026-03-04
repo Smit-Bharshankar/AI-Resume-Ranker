@@ -1,11 +1,17 @@
 import { AxiosProgressEvent, AxiosResponse } from "axios";
 import { ApiClientError, axiosClient, parseApiResponse } from "./axiosClient";
-import { Resume } from "../types/resume";
+import { CandidateStage, Resume } from "../types/resume";
 import { ResumeFileUrl } from "../types/candidate";
+import { isCandidateStage } from "../utils/candidateStageUtils";
 
 export type UploadResumesResult = {
   uploaded: number;
   failed: number;
+};
+
+export type UpdateCandidateStageInput = {
+  resumeId: string;
+  stage: CandidateStage;
 };
 
 type UploadResumesOptions = {
@@ -25,7 +31,8 @@ const isResumeShape = (payload: unknown): payload is Resume => {
   return (
     typeof candidate.id === "string" &&
     typeof candidate.jobId === "string" &&
-    typeof candidate.status === "string"
+    typeof candidate.status === "string" &&
+    isCandidateStage(candidate.stage)
   );
 };
 
@@ -227,4 +234,15 @@ export const uploadResumes = async (
   );
 
   return parseUploadResponse(payload);
+};
+
+export const updateCandidateStage = async ({
+  resumeId,
+  stage,
+}: UpdateCandidateStageInput): Promise<Resume> => {
+  const payload = await request<unknown>(
+    axiosClient.patch<unknown>(`/resumes/${resumeId}/stage`, { stage })
+  );
+
+  return parseResumeDetailResponse(payload);
 };

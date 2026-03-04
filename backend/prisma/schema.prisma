@@ -35,6 +35,14 @@ enum JobStatus {
   FAILED_STRUCTURE
 }
 
+enum CandidateStage {
+  NEW
+  SHORTLISTED
+  INTERVIEWING
+  REJECTED
+  HIRED
+}
+
 model Job {
   id                     String    @id @default(uuid()) @db.Uuid
   userId                 String    @db.Uuid
@@ -68,6 +76,7 @@ model Resume {
   structuredData Json?
   insights       Json?
   status         ResumeStatus
+  stage          CandidateStage @default(NEW)
   score          Float?
   scoreBreakdown Json?
   createdAt      DateTime     @default(now())

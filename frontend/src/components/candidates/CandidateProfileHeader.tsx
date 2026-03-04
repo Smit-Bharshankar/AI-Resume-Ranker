@@ -1,9 +1,11 @@
 import { memo } from "react";
 import { Insights } from "../../types/insights";
-import { ResumeStatus } from "../../types/resume";
+import { CandidateStage, ResumeStatus } from "../../types/resume";
 import { isResumeProcessingStatus } from "../../utils/resumeStatusUtils";
 import { Badge } from "../ui/Badge";
 import { Card } from "../ui/Card";
+import { CandidateStageBadge } from "../workflow/CandidateStageBadge";
+import { CandidateStageSelector } from "../workflow/CandidateStageSelector";
 import { CandidateStatusBadge } from "./CandidateStatusBadge";
 
 type CandidateProfileHeaderProps = {
@@ -12,6 +14,9 @@ type CandidateProfileHeaderProps = {
   jobTitle?: string;
   score?: number;
   status: ResumeStatus;
+  stage: CandidateStage;
+  onStageChange?: (stage: CandidateStage) => void;
+  isStageUpdating?: boolean;
   recommendation?: Insights["recommendation"];
   className?: string;
 };
@@ -50,6 +55,9 @@ function CandidateProfileHeaderComponent({
   jobTitle,
   score,
   status,
+  stage,
+  onStageChange,
+  isStageUpdating = false,
   recommendation,
   className,
 }: CandidateProfileHeaderProps) {
@@ -82,6 +90,19 @@ function CandidateProfileHeaderComponent({
             <Badge tone={getRecommendationTone(recommendation)}>
               {toRecommendationLabel(recommendation)}
             </Badge>
+          </p>
+          <p className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-slate-900">Stage:</span>
+            <CandidateStageBadge stage={stage} />
+            {onStageChange ? (
+              <CandidateStageSelector
+                value={stage}
+                onChange={onStageChange}
+                isUpdating={isStageUpdating}
+                ariaLabel="Candidate stage"
+                className="min-w-36"
+              />
+            ) : null}
           </p>
         </div>
       </div>

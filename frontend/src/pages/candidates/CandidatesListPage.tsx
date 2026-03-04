@@ -1,12 +1,18 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { CandidateTable } from "../../components/candidates/CandidateTable";
 import { UploadResumeDropzone } from "../../components/candidates/UploadResumeDropzone";
 import { Card } from "../../components/ui/Card";
+import { useUpdateCandidateStage } from "../../hooks/resumes/useUpdateCandidateStage";
 import { useResumes } from "../../hooks/resumes/useResumes";
-import { Resume } from "../../types/resume";
+import { CandidateStage, Resume } from "../../types/resume";
+import {
+  CANDIDATE_STAGE_FILTERS,
+  CandidateStageFilter,
+  getCandidateStageLabel,
+} from "../../utils/candidateStageUtils";
 import { shouldPollResumeStatus } from "../../utils/resumeStatusUtils";
 
 const sortByScoreDesc = (resumes: Resume[]): Resume[] => {
@@ -21,17 +27,30 @@ export function CandidatesListPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const safeJobId = jobId ?? "";
   const resumesQuery = useResumes(safeJobId);
+  const updateCandidateStageMutation = useUpdateCandidateStage();
+  const [selectedStageFilter, setSelectedStageFilter] =
+    useState<CandidateStageFilter>("ALL");
 
-  const resumes = useMemo(() => {
+  const resumes = useMemo<Resume[]>(() => {
     if (!resumesQuery.data) {
       return [];
     }
-    return sortByScoreDesc(resumesQuery.data);
-  }, [resumesQuery.data]);
+
+    const filtered =
+      selectedStageFilter === "ALL"
+        ? resumesQuery.data
+        : resumesQuery.data.filter((resume) => resume.stage === selectedStageFilter);
+
+    return sortByScoreDesc(filtered);
+  }, [resumesQuery.data, selectedStageFilter]);
 
   const hasActiveProcessing = useMemo(() => {
     return resumes.some((resume) => shouldPollResumeStatus(resume.status));
   }, [resumes]);
+
+  const handleStageChange = (resumeId: string, stage: CandidateStage) => {
+    updateCandidateStageMutation.mutate({ resumeId, stage });
+  };
 
   if (!jobId) {
     return (
@@ -89,7 +108,45 @@ export function CandidatesListPage() {
         </Card>
       ) : null}
 
-      {resumesQuery.isSuccess ? <CandidateTable resumes={resumes} /> : null}
+      <Card>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-semibold text-slate-900">Filter by stage:</span>
+          {CANDIDATE_STAGE_FILTERS.map((filterOption) => {
+            const isActive = selectedStageFilter === filterOption;
+            const label =
+              filterOption === "ALL" ? "All" : getCandidateStageLabel(filterOption);
+
+            return (
+              <button
+                key={filterOption}
+                type="button"
+                onClick={() => {
+                  setSelectedStageFilter(filterOption);
+                }}
+                className={`rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition ${
+                  isActive
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      {resumesQuery.isSuccess ? (
+        <CandidateTable
+          resumes={resumes}
+          onStageChange={handleStageChange}
+          updatingResumeId={
+            updateCandidateStageMutation.isPending
+              ? updateCandidateStageMutation.variables?.resumeId
+              : undefined
+          }
+        />
+      ) : null}
     </div>
   );
 }
