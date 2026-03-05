@@ -19,6 +19,9 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Add the NVM bin folder to the system PATH for this session
+            export PATH=$PATH:/root/.nvm/versions/node/v24.14.0/bin
+            
             cd ~/AI-Resume-Ranker
             git pull origin main
             
