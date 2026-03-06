@@ -33,6 +33,8 @@ const defaultAiModel = aiProvider === "openai" ? "gpt-4o-mini" : "gemini-2.5-fla
 const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: toNumber(process.env.PORT, 5000),
+  apiRateLimitWindowMs: toNumber(process.env.API_RATE_LIMIT_WINDOW_MS, 60000),
+  apiRateLimitMaxRequests: toNumber(process.env.API_RATE_LIMIT_MAX_REQUESTS, 100),
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseAnonKey:
     process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY ?? "",

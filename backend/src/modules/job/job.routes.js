@@ -2,10 +2,12 @@ import { Router } from "express";
 import jobController from "./job.controller.js";
 import uploadRoutes from "../upload/upload.routes.js";
 import authMiddleware from "../../middleware/auth.middleware.js";
+import rateLimitMiddleware from "../../middleware/rate-limit.middleware.js";
 
 const jobRoutes = Router();
 
 jobRoutes.use(authMiddleware);
+jobRoutes.use(rateLimitMiddleware);
 
 jobRoutes.get("/", jobController.getJobs);
 jobRoutes.post("/", jobController.createJob);

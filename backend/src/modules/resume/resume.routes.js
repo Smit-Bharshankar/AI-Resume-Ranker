@@ -1,10 +1,12 @@
 import { Router } from "express";
 import resumeController from "./resume.controller.js";
 import authMiddleware from "../../middleware/auth.middleware.js";
+import rateLimitMiddleware from "../../middleware/rate-limit.middleware.js";
 
 const resumeRoutes = Router();
 
 resumeRoutes.use(authMiddleware);
+resumeRoutes.use(rateLimitMiddleware);
 
 resumeRoutes.patch("/:resumeId/stage", resumeController.patchResumeStage);
 resumeRoutes.get("/:id", resumeController.getResumeById);
