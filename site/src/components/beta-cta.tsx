@@ -13,7 +13,7 @@ export default function BetaCTA() {
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
         viewport={{ once: true, amount: 0.25 }}
-        className="mx-auto w-full max-w-4xl rounded-2xl border border-border/70 bg-gradient-to-b from-background to-muted/30 p-6 sm:p-8"
+        className="mx-auto w-full max-w-4xl rounded-2xl border border-border/70 bg-linear-to-b from-background to-muted/30 p-6 sm:p-8"
       >
         <div className="mb-6 space-y-2 text-center">
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">Join the beta</h2>
