@@ -1,7 +1,9 @@
-﻿"use client";
+"use client";
 
 import { motion } from "framer-motion";
 import { CheckCircle2 } from "lucide-react";
+
+import CandidateRankingDemo from "@/components/candidate-ranking-demo";
 
 const bullets = [
   "Candidate ranking dashboard",
@@ -19,12 +21,12 @@ export default function ProductPreview() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
           viewport={{ once: true, amount: 0.25 }}
-          className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-muted/40 via-background to-muted/30 p-10"
+          className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/60 p-6 shadow-lg backdrop-blur-md sm:p-8"
         >
-          <div className="absolute -top-10 -right-10 size-32 rounded-full bg-primary/10 blur-2xl" />
-          <div className="absolute -bottom-14 -left-10 size-40 rounded-full bg-primary/10 blur-2xl" />
-          <div className="relative flex min-h-[320px] items-center justify-center rounded-xl border border-dashed bg-background/80">
-            <p className="text-xl font-semibold tracking-tight text-foreground/80 sm:text-2xl">Dashboard Preview</p>
+          <div className="absolute -top-10 -right-10 size-32 rounded-full bg-blue-500/15 blur-2xl" />
+          <div className="absolute -bottom-14 -left-10 size-40 rounded-full bg-purple-500/15 blur-2xl" />
+          <div className="relative">
+            <CandidateRankingDemo />
           </div>
         </motion.div>
 
@@ -53,4 +55,3 @@ export default function ProductPreview() {
     </section>
   );
 }
-

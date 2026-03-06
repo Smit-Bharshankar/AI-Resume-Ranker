@@ -1,4 +1,5 @@
-﻿import BetaCTA from "@/components/beta-cta";
+import BetaCTA from "@/components/beta-cta";
+import AIPipeline from "@/components/ai-pipeline";
 import FAQ from "@/components/faq";
 import Features from "@/components/features";
 import Footer from "@/components/footer";
@@ -28,6 +29,8 @@ export default function Home() {
         <SectionDivider />
         <HowItWorks />
         <SectionDivider />
+        <AIPipeline />
+        <SectionDivider />
         <ProductPreview />
         <SectionDivider />
         <Features />
@@ -42,4 +45,3 @@ export default function Home() {
     </div>
   );
 }
-

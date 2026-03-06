@@ -13,7 +13,7 @@ const problems = [
   },
   {
     title: "Hard to Compare Candidates",
-    description: "It’s difficult to evaluate candidates consistently.",
+    description: "It's difficult to evaluate candidates consistently.",
     icon: Scale,
   },
   {
@@ -53,7 +53,7 @@ export default function Problem() {
               >
                 <Card className="h-full rounded-xl border border-white/60 bg-white/60 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardHeader className="space-y-3">
-                    <div className="flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-md">
+                    <div className="flex size-11 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-white shadow-md">
                       <Icon className="size-5" />
                     </div>
                     <CardTitle className="text-lg">{problem.title}</CardTitle>

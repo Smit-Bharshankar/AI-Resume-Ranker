@@ -7,13 +7,16 @@ export default function Footer() {
         <p className="text-sm font-medium text-foreground">ResumeRank AI</p>
 
         <nav className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-          <Link href="#" className="transition-colors hover:text-foreground">
+          <Link href="/privacy-policy" className="transition-colors hover:text-foreground">
             Privacy Policy
           </Link>
-          <Link href="#" className="transition-colors hover:text-foreground">
+          <Link href="/terms" className="transition-colors hover:text-foreground">
             Terms of Service
           </Link>
-          <Link href="#" className="transition-colors hover:text-foreground">
+          <Link href="/ai-transparency" className="transition-colors hover:text-foreground">
+            AI Transparency & Responsible Use
+          </Link>
+          <Link href="/contact" className="transition-colors hover:text-foreground">
             Contact
           </Link>
         </nav>
@@ -21,4 +24,3 @@ export default function Footer() {
     </footer>
   );
 }
-
