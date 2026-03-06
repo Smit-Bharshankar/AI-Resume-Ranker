@@ -10,12 +10,12 @@ import Stats from "@/components/stats";
 import Workflow from "@/components/workflow";
 
 function SectionDivider() {
-  return <div className="my-24 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />;
+  return <div className="my-24 h-px bg-linear-to-r from-transparent via-gray-300 to-transparent" />;
 }
 
 export default function Home() {
   return (
-    <div className="relative overflow-hidden bg-gradient-to-b from-white to-gray-100">
+    <div className="relative overflow-hidden bg-linear-to-b from-white to-gray-100">
       <div className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-blue-400/25 blur-3xl" />
       <div className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-purple-400/25 blur-3xl" />
 
