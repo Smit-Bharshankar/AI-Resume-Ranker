@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'backend/**'                # Only run if files in backend change
+      - 'ecosystem.config.js'       # Or if your PM2 config changes
+      - '.github/workflows/deploy.yml' # Or if you edit this pipeline
 
 jobs:
   deploy:
