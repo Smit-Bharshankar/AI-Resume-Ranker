@@ -19,7 +19,9 @@ for (const error of aiConfigHealth.errors) {
 
 const allowedOrigins = [
   'http://localhost:5173', // Local development
-  'https://ai-recruiter-assistant.smitxcode.in' // Your actual frontend URL
+  'https://sortres.com',
+  'https://app.sortres.com',
+  'https://api.sortres.com'
 ];
 
 app.use(cors({
