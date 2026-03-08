@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useAnalyticsEvents } from "../../analytics/events";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { ActivateJobButton } from "../../components/jobs/ActivateJobButton";
@@ -20,6 +21,8 @@ export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const safeJobId = jobId ?? "";
   const [forcePolling, setForcePolling] = useState<boolean>(false);
+  const trackedAnalysisCompletions = useRef<Set<string>>(new Set());
+  const { trackAnalysisCompleted, trackAnalysisStarted } = useAnalyticsEvents();
 
   const jobQuery = useJob(safeJobId);
   const shouldPollFromStatus = useMemo(() => {
@@ -37,6 +40,28 @@ export function JobDetailPage() {
       setForcePolling(false);
     }
   }, [job]);
+
+  useEffect(() => {
+    if (!job) {
+      return;
+    }
+
+    const completionKey = `${job.id}:${job.status}`;
+    if (trackedAnalysisCompletions.current.has(completionKey)) {
+      return;
+    }
+
+    if (job.status === "REQUIREMENTS_STRUCTURED") {
+      trackedAnalysisCompletions.current.add(completionKey);
+      trackAnalysisCompleted("requirements_extraction", job.id, "success");
+      return;
+    }
+
+    if (job.status === "FAILED_STRUCTURE") {
+      trackedAnalysisCompletions.current.add(completionKey);
+      trackAnalysisCompleted("requirements_extraction", job.id, "failed");
+    }
+  }, [job, trackAnalysisCompleted]);
 
   if (!jobId) {
     return (
@@ -109,6 +134,7 @@ export function JobDetailPage() {
           jobId={job.id}
           onTriggered={() => {
             setForcePolling(true);
+            trackAnalysisStarted("requirements_extraction", job.id);
           }}
         />
       ) : null}

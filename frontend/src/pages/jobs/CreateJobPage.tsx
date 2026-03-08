@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
+import { useAnalyticsEvents } from "../../analytics/events";
 import { createJob } from "../../api/jobsApi";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
@@ -10,6 +11,7 @@ import { Job } from "../../types/job";
 
 export function CreateJobPage() {
   const navigate = useNavigate();
+  const { trackJobCreated } = useAnalyticsEvents();
   const [title, setTitle] = useState<string>("");
   const [rawDescription, setRawDescription] = useState<string>("");
   const [formError, setFormError] = useState<string>("");
@@ -19,6 +21,7 @@ export function CreateJobPage() {
       mutationFn: ({ title: inputTitle, rawDescription: inputRawDescription }) =>
         createJob({ title: inputTitle, rawDescription: inputRawDescription }),
       onSuccess: (createdJob) => {
+        trackJobCreated(createdJob.id);
         navigate(`/jobs/${createdJob.id}`);
       },
       retry: 0,

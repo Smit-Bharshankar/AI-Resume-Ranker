@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import type { AuthError, Session, User } from "@supabase/supabase-js";
+import { usePostHog } from "@posthog/react";
 import { supabase } from "../lib/supabaseClient";
 
 type AuthContextValue = {
@@ -57,6 +58,7 @@ const getAuthErrorMessage = (error: AuthError): string => {
 };
 
 export function AuthProvider({ children }: PropsWithChildren) {
+  const posthog = usePostHog();
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +98,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!posthog) {
+      return;
+    }
+
+    if (user) {
+      posthog.identify(user.id, {
+        email: user.email ?? "",
+      });
+      return;
+    }
+
+    posthog.reset();
+  }, [posthog, user]);
 
   const signUp = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({

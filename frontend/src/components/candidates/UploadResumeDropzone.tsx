@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useDropzone } from "react-dropzone";
+import { useAnalyticsEvents } from "../../analytics/events";
 import { useUploadResume } from "../../hooks/resumes/useUploadResume";
 import { ErrorState } from "../common/ErrorState";
 import { Loader } from "../common/Loader";
@@ -19,6 +20,7 @@ export function UploadResumeDropzone({
   jobId,
   onUploaded,
 }: UploadResumeDropzoneProps) {
+  const { trackResumeUploaded } = useAnalyticsEvents();
   const { uploadMutation, uploadProgress, resetProgress } = useUploadResume();
 
   const onDropAccepted = async (acceptedFiles: readonly File[]) => {
@@ -31,6 +33,7 @@ export function UploadResumeDropzone({
         jobId,
         files: [...acceptedFiles],
       });
+      trackResumeUploaded("pdf", acceptedFiles.length);
       onUploaded?.();
     } catch {
       // Error state is already exposed through uploadMutation.error.

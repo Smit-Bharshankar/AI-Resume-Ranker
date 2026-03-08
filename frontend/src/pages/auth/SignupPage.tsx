@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useAnalyticsEvents } from "../../analytics/events";
 import { useAuth } from "../../context/AuthContext";
 
 const toUiError = (error: unknown): string => {
@@ -20,6 +21,7 @@ const toUiError = (error: unknown): string => {
 export function SignupPage() {
   const navigate = useNavigate();
   const { user, isLoading, signUp, requireEmailConfirmation } = useAuth();
+  const { trackSignupCompleted } = useAnalyticsEvents();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,6 +43,7 @@ export function SignupPage() {
 
     try {
       await signUp(email.trim(), password);
+      trackSignupCompleted("email");
       setInfo(
         requireEmailConfirmation
           ? "Signup successful. Please check your inbox and confirm your email before logging in."

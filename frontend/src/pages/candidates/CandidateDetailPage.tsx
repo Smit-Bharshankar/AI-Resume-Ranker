@@ -1,5 +1,6 @@
-import { lazy, Suspense, useMemo } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
+import { useAnalyticsEvents } from "../../analytics/events";
 import { CandidateProfileHeader } from "../../components/candidates/CandidateProfileHeader";
 import { CandidateSkillsMatch } from "../../components/candidates/CandidateSkillsMatch";
 import { ErrorState } from "../../components/common/ErrorState";
@@ -34,6 +35,8 @@ export function CandidateDetailPage() {
   const resumeQuery = useCandidateResumeDetail(safeResumeId);
   const updateCandidateStageMutation = useUpdateCandidateStage();
   const resume = resumeQuery.data;
+  const trackedResumeIds = useRef<Set<string>>(new Set());
+  const { trackCandidateViewed } = useAnalyticsEvents();
   const jobQuery = useJob(resume?.jobId ?? "");
 
   const isProcessing = useMemo(
@@ -42,6 +45,19 @@ export function CandidateDetailPage() {
   );
   const isInsightsGenerating = resume?.status === "INSIGHTS_GENERATING";
   const isFailed = resume ? isResumeFailedStatus(resume.status) : false;
+
+  useEffect(() => {
+    if (!resume) {
+      return;
+    }
+
+    if (trackedResumeIds.current.has(resume.id)) {
+      return;
+    }
+
+    trackedResumeIds.current.add(resume.id);
+    trackCandidateViewed(resume.id);
+  }, [resume, trackCandidateViewed]);
 
   const handleStageChange = (stage: CandidateStage) => {
     if (!resume) {
