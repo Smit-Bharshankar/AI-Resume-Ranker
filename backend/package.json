@@ -22,6 +22,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
+    "@sentry/node": "^10.42.0",
     "@supabase/supabase-js": "^2.97.0",
     "bullmq": "^5.70.0",
     "cors": "^2.8.6",
@@ -32,6 +33,7 @@
     "openai": "^6.22.0",
     "pdf-parse": "^2.4.5",
     "pg": "^8.18.0",
+    "posthog-node": "^5.21.2",
     "prisma": "^7.4.1"
   },
   "devDependencies": {

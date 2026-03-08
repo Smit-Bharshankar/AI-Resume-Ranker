@@ -19,10 +19,10 @@ const jobExtractionQueue = new Queue(env.jobExtractionQueueName, {
   },
 });
 
-const enqueueJobRequirementsExtraction = async ({ jobId }) => {
+const enqueueJobRequirementsExtraction = async ({ jobId, userId }) => {
   return jobExtractionQueue.add(
     "extract-job-requirements",
-    { jobId },
+    { jobId, userId },
     {
       jobId,
     },

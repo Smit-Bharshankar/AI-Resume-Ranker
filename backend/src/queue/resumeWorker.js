@@ -9,6 +9,9 @@ import { validateAiConfiguration } from "../modules/ai/providers/provider.factor
 import supabaseStorage from "../storage/supabaseStorage.js";
 import logger from "../utils/logger.js";
 import { PDFParse } from "pdf-parse";
+import { Sentry } from "../monitoring/sentry.js";
+import { capturePosthogEvent } from "../analytics/posthog.js";
+import { shutdownPosthog } from "../analytics/posthog.js";
 
 const normalizeText = (rawText) => {
   return rawText
@@ -18,8 +21,8 @@ const normalizeText = (rawText) => {
     .trim();
 };
 
-const enqueueInsightsPipeline = async ({ resumeId, jobLogger }) => {
-  await enqueueResumeInsightGeneration({ resumeId });
+const enqueueInsightsPipeline = async ({ resumeId, userId, jobId, jobLogger }) => {
+  await enqueueResumeInsightGeneration({ resumeId, userId, jobId });
 
   jobLogger.info("Resume insights generation enqueued", {
     stage: "insights_enqueue",
@@ -29,7 +32,7 @@ const enqueueInsightsPipeline = async ({ resumeId, jobLogger }) => {
 
 const processResumeJob = async (job) => {
   const startedAtMs = Date.now();
-  const { resumeId } = job.data ?? {};
+  const { resumeId, userId: jobUserId, jobId: payloadJobId } = job.data ?? {};
 
   if (!resumeId || typeof resumeId !== "string") {
     throw new Error("Invalid resumeId in queue payload");
@@ -44,6 +47,25 @@ const processResumeJob = async (job) => {
   });
 
   baseJobLogger.info("Resume pipeline job started");
+
+  const ownerContext =
+    typeof jobUserId === "string"
+      ? { jobId: payloadJobId ?? null, userId: jobUserId }
+      : await resumeService.getResumeOwnerContext(resumeId);
+  const distinctId = ownerContext?.job?.userId ?? ownerContext?.userId ?? null;
+  const relatedJobId = ownerContext?.jobId ?? payloadJobId ?? null;
+
+  capturePosthogEvent({
+    distinctId,
+    event: "analysis_started",
+    properties: {
+      analysis_type: "resume_analysis",
+      resume_id: resumeId,
+      job_id: relatedJobId,
+      queue_job_id: String(job.id ?? ""),
+      source: "worker",
+    },
+  });
 
   let resume = await resumeService.getResumeById(resumeId);
 
@@ -93,9 +115,43 @@ const processResumeJob = async (job) => {
         stage: "text_extraction",
         durationMs: Date.now() - extractionStartedAtMs,
       });
+
+      capturePosthogEvent({
+        distinctId,
+        event: "resume_parsed",
+        properties: {
+          resume_id: resumeId,
+          job_id: relatedJobId,
+          queue_job_id: String(job.id ?? ""),
+          duration_ms: Date.now() - extractionStartedAtMs,
+        },
+      });
     } catch (error) {
       const attempts = job.opts.attempts ?? env.resumeQueueAttempts;
       const isFinalAttempt = job.attemptsMade + 1 >= attempts;
+      Sentry.captureException(error, {
+        tags: {
+          queue: env.resumeQueueName,
+          worker: "resume",
+        },
+        extra: {
+          resumeId,
+          queueJobId: job.id,
+          isFinalAttempt,
+        },
+      });
+      capturePosthogEvent({
+        distinctId,
+        event: "worker_failed",
+        properties: {
+          worker: "resume",
+          queue: env.resumeQueueName,
+          resume_id: resumeId,
+          job_id: relatedJobId,
+          queue_job_id: String(job.id ?? ""),
+          is_final_attempt: isFinalAttempt,
+        },
+      });
 
       jobLogger.error("Resume text extraction failed", {
         stage: "text_extraction",
@@ -135,7 +191,12 @@ const processResumeJob = async (job) => {
 
       if (scoringResult?.status === "scored") {
         try {
-          await enqueueInsightsPipeline({ resumeId, jobLogger });
+          await enqueueInsightsPipeline({
+            resumeId,
+            userId: distinctId,
+            jobId: relatedJobId,
+            jobLogger,
+          });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
             stage: "insights_enqueue",
@@ -143,10 +204,34 @@ const processResumeJob = async (job) => {
           });
         }
       }
+      capturePosthogEvent({
+        distinctId,
+        event: "analysis_completed",
+        properties: {
+          analysis_type: "resume_analysis",
+          resume_id: resumeId,
+          job_id: relatedJobId,
+          queue_job_id: String(job.id ?? ""),
+          status: "success",
+          duration_ms: Date.now() - startedAtMs,
+        },
+      });
       return;
     }
 
     if (structureResult?.status === "failed") {
+      capturePosthogEvent({
+        distinctId,
+        event: "analysis_completed",
+        properties: {
+          analysis_type: "resume_analysis",
+          resume_id: resumeId,
+          job_id: relatedJobId,
+          queue_job_id: String(job.id ?? ""),
+          status: "failed",
+          duration_ms: Date.now() - startedAtMs,
+        },
+      });
       jobLogger.warn("Stopping pipeline due to structuring failure", {
         stage: "structuring",
         totalDurationMs: Date.now() - startedAtMs,
@@ -167,7 +252,12 @@ const processResumeJob = async (job) => {
 
       if (scoringResult?.status === "scored") {
         try {
-          await enqueueInsightsPipeline({ resumeId, jobLogger });
+          await enqueueInsightsPipeline({
+            resumeId,
+            userId: distinctId,
+            jobId: relatedJobId,
+            jobLogger,
+          });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
             stage: "insights_enqueue",
@@ -175,6 +265,18 @@ const processResumeJob = async (job) => {
           });
         }
       }
+      capturePosthogEvent({
+        distinctId,
+        event: "analysis_completed",
+        properties: {
+          analysis_type: "resume_analysis",
+          resume_id: resumeId,
+          job_id: relatedJobId,
+          queue_job_id: String(job.id ?? ""),
+          status: "success",
+          duration_ms: Date.now() - startedAtMs,
+        },
+      });
     }
     return;
   }
@@ -191,7 +293,12 @@ const processResumeJob = async (job) => {
 
     if (scoringResult?.status === "scored") {
       try {
-        await enqueueInsightsPipeline({ resumeId, jobLogger });
+        await enqueueInsightsPipeline({
+          resumeId,
+          userId: distinctId,
+          jobId: relatedJobId,
+          jobLogger,
+        });
       } catch (error) {
         jobLogger.error("Failed to enqueue resume insights", {
           stage: "insights_enqueue",
@@ -199,18 +306,47 @@ const processResumeJob = async (job) => {
         });
       }
     }
+    capturePosthogEvent({
+      distinctId,
+      event: "analysis_completed",
+      properties: {
+        analysis_type: "resume_analysis",
+        resume_id: resumeId,
+        job_id: relatedJobId,
+        queue_job_id: String(job.id ?? ""),
+        status: "success",
+        duration_ms: Date.now() - startedAtMs,
+      },
+    });
     return;
   }
 
   if (resume?.status === "SCORED") {
     try {
-      await enqueueInsightsPipeline({ resumeId, jobLogger });
+      await enqueueInsightsPipeline({
+        resumeId,
+        userId: distinctId,
+        jobId: relatedJobId,
+        jobLogger,
+      });
     } catch (error) {
       jobLogger.error("Failed to enqueue resume insights from scored state", {
         stage: "insights_enqueue",
         error: error.message,
       });
     }
+    capturePosthogEvent({
+      distinctId,
+      event: "analysis_completed",
+      properties: {
+        analysis_type: "resume_analysis",
+        resume_id: resumeId,
+        job_id: relatedJobId,
+        queue_job_id: String(job.id ?? ""),
+        status: "success",
+        duration_ms: Date.now() - startedAtMs,
+      },
+    });
     return;
   }
 
@@ -240,6 +376,12 @@ for (const error of aiConfigHealth.errors) {
 }
 
 worker.on("error", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.resumeQueueName,
+      worker: "resume",
+    },
+  });
   logger.error("Worker encountered an error", {
     queue: env.resumeQueueName,
     error: error.message,
@@ -247,6 +389,28 @@ worker.on("error", (error) => {
 });
 
 worker.on("failed", (job, error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.resumeQueueName,
+      worker: "resume",
+    },
+    extra: {
+      jobId: job?.id,
+      resumeId: job?.data?.resumeId,
+      attemptsMade: job?.attemptsMade,
+    },
+  });
+  capturePosthogEvent({
+    distinctId: job?.data?.userId,
+    event: "worker_failed",
+    properties: {
+      worker: "resume",
+      queue: env.resumeQueueName,
+      queue_job_id: String(job?.id ?? ""),
+      resume_id: job?.data?.resumeId ?? null,
+      job_id: job?.data?.jobId ?? null,
+    },
+  });
   logger.error("Queue job failed", {
     queue: env.resumeQueueName,
     jobId: job?.id,
@@ -262,6 +426,12 @@ logger.info("Resume worker started", {
 });
 
 process.on("unhandledRejection", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.resumeQueueName,
+      worker: "resume",
+    },
+  });
   logger.error("Unhandled rejection in worker", {
     queue: env.resumeQueueName,
     error: error instanceof Error ? error.message : String(error),
@@ -269,9 +439,16 @@ process.on("unhandledRejection", (error) => {
 });
 
 process.on("uncaughtException", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.resumeQueueName,
+      worker: "resume",
+    },
+  });
   logger.error("Uncaught exception in worker", {
     queue: env.resumeQueueName,
     error: error.message,
   });
+  void shutdownPosthog();
   process.exit(1);
 });

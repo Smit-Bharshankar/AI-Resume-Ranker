@@ -38,6 +38,16 @@ const getJobById = async (id, userId) => {
   });
 };
 
+const getJobOwnerContext = async (id) => {
+  return prisma.job.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      userId: true,
+    },
+  });
+};
+
 const updateStructuredRequirements = async (id, structuredRequirements, userId) => {
   return prisma.job.updateMany({
     where: buildUserScopedWhere({ id }, userId),
@@ -122,6 +132,7 @@ const jobRepository = {
   createJob,
   getJobsByUserId,
   getJobById,
+  getJobOwnerContext,
   updateStructuredRequirements,
   updateStructuredRequirementsIfStatus,
   updateStatusIfCurrent,

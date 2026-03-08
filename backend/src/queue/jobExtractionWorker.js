@@ -3,6 +3,10 @@ import env from "../config/env.js";
 import logger from "../utils/logger.js";
 import { connection } from "./resumeQueue.js";
 import jobExtractionService from "../modules/jobExtraction/jobExtraction.service.js";
+import { Sentry } from "../monitoring/sentry.js";
+import { capturePosthogEvent } from "../analytics/posthog.js";
+import jobService from "../modules/job/job.service.js";
+import { shutdownPosthog } from "../analytics/posthog.js";
 
 const isRetriableError = (error) => {
   return error?.retryable === true;
@@ -10,11 +14,17 @@ const isRetriableError = (error) => {
 
 const processJobExtraction = async (job) => {
   const startedAtMs = Date.now();
-  const { jobId } = job.data ?? {};
+  const { jobId, userId: jobUserId } = job.data ?? {};
 
   if (!jobId || typeof jobId !== "string") {
     throw new Error("Invalid jobId in queue payload");
   }
+
+  const ownerContext =
+    typeof jobUserId === "string"
+      ? { userId: jobUserId }
+      : await jobService.getJobOwnerContext(jobId);
+  const distinctId = ownerContext?.userId ?? null;
 
   const baseLogger = logger.child({
     queue: env.jobExtractionQueueName,
@@ -25,9 +35,30 @@ const processJobExtraction = async (job) => {
   });
 
   baseLogger.info("Job requirements extraction started");
+  capturePosthogEvent({
+    distinctId,
+    event: "analysis_started",
+    properties: {
+      analysis_type: "requirements_extraction",
+      job_id: jobId,
+      queue_job_id: String(job.id ?? ""),
+      source: "worker",
+    },
+  });
 
   try {
     const result = await jobExtractionService.process(jobId);
+    capturePosthogEvent({
+      distinctId,
+      event: "analysis_completed",
+      properties: {
+        analysis_type: "requirements_extraction",
+        job_id: jobId,
+        queue_job_id: String(job.id ?? ""),
+        status: "success",
+        duration_ms: Date.now() - startedAtMs,
+      },
+    });
     baseLogger.info("Job requirements extraction finished", {
       resultStatus: result?.status ?? "unknown",
       durationMs: Date.now() - startedAtMs,
@@ -38,6 +69,39 @@ const processJobExtraction = async (job) => {
     const attempts = job.opts.attempts ?? env.jobExtractionQueueAttempts;
     const isFinalAttempt = job.attemptsMade + 1 >= attempts;
     const retryable = isRetriableError(error);
+    Sentry.captureException(error, {
+      tags: {
+        queue: env.jobExtractionQueueName,
+        worker: "job-extraction",
+      },
+      extra: {
+        jobId,
+        queueJobId: job.id,
+        retryable,
+      },
+    });
+    capturePosthogEvent({
+      distinctId,
+      event: "worker_failed",
+      properties: {
+        worker: "job_extraction",
+        queue: env.jobExtractionQueueName,
+        job_id: jobId,
+        queue_job_id: String(job.id ?? ""),
+        retryable,
+      },
+    });
+    capturePosthogEvent({
+      distinctId,
+      event: "analysis_completed",
+      properties: {
+        analysis_type: "requirements_extraction",
+        job_id: jobId,
+        queue_job_id: String(job.id ?? ""),
+        status: "failed",
+        duration_ms: Date.now() - startedAtMs,
+      },
+    });
 
     baseLogger.error("Job requirements extraction failed", {
       error: error.message,
@@ -60,6 +124,12 @@ const worker = new Worker(env.jobExtractionQueueName, processJobExtraction, {
 });
 
 worker.on("error", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.jobExtractionQueueName,
+      worker: "job-extraction",
+    },
+  });
   logger.error("Job extraction worker encountered an error", {
     queue: env.jobExtractionQueueName,
     error: error.message,
@@ -67,6 +137,27 @@ worker.on("error", (error) => {
 });
 
 worker.on("failed", (job, error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.jobExtractionQueueName,
+      worker: "job-extraction",
+    },
+    extra: {
+      queueJobId: job?.id,
+      jobId: job?.data?.jobId,
+      attemptsMade: job?.attemptsMade,
+    },
+  });
+  capturePosthogEvent({
+    distinctId: job?.data?.userId,
+    event: "worker_failed",
+    properties: {
+      worker: "job_extraction",
+      queue: env.jobExtractionQueueName,
+      queue_job_id: String(job?.id ?? ""),
+      job_id: job?.data?.jobId ?? null,
+    },
+  });
   logger.error("Job extraction queue job failed", {
     queue: env.jobExtractionQueueName,
     queueJobId: job?.id,
@@ -82,6 +173,12 @@ logger.info("Job extraction worker started", {
 });
 
 process.on("unhandledRejection", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.jobExtractionQueueName,
+      worker: "job-extraction",
+    },
+  });
   logger.error("Unhandled rejection in job extraction worker", {
     queue: env.jobExtractionQueueName,
     error: error instanceof Error ? error.message : String(error),
@@ -89,9 +186,16 @@ process.on("unhandledRejection", (error) => {
 });
 
 process.on("uncaughtException", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      queue: env.jobExtractionQueueName,
+      worker: "job-extraction",
+    },
+  });
   logger.error("Uncaught exception in job extraction worker", {
     queue: env.jobExtractionQueueName,
     error: error.message,
   });
+  void shutdownPosthog();
   process.exit(1);
 });

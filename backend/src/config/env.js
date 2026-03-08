@@ -35,6 +35,9 @@ const env = {
   port: toNumber(process.env.PORT, 5000),
   apiRateLimitWindowMs: toNumber(process.env.API_RATE_LIMIT_WINDOW_MS, 60000),
   apiRateLimitMaxRequests: toNumber(process.env.API_RATE_LIMIT_MAX_REQUESTS, 100),
+  sentryDsnBackend: process.env.SENTRY_DSN_BACKEND ?? "",
+  posthogKey: process.env.POSTHOG_KEY ?? "",
+  posthogHost: process.env.POSTHOG_HOST ?? "https://app.posthog.com",
   supabaseUrl: process.env.SUPABASE_URL ?? "",
   supabaseAnonKey:
     process.env.SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY ?? "",

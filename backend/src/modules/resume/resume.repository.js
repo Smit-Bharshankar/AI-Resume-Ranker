@@ -71,6 +71,21 @@ const getResumeById = async (id, userId) => {
   });
 };
 
+const getResumeOwnerContext = async (id) => {
+  return prisma.resume.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      jobId: true,
+      job: {
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
+};
+
 const completeTextExtraction = async ({ id, rawText }) => {
   const result = await prisma.resume.updateMany({
     where: {
@@ -228,6 +243,7 @@ const resumeRepository = {
   updateStructuredData,
   updateResumeStage,
   getResumeById,
+  getResumeOwnerContext,
   completeTextExtraction,
   markExtractionFailed,
   completeStructureExtraction,

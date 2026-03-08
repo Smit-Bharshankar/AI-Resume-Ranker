@@ -12,6 +12,10 @@ const getJobById = async (id, userId) => {
   return jobRepository.getJobById(id, userId);
 };
 
+const getJobOwnerContext = async (id) => {
+  return jobRepository.getJobOwnerContext(id);
+};
+
 const updateStructuredRequirements = async (id, structuredRequirements, userId) => {
   return jobRepository.updateStructuredRequirements(id, structuredRequirements, userId);
 };
@@ -56,6 +60,7 @@ const jobService = {
   createJob,
   getJobsByUserId,
   getJobById,
+  getJobOwnerContext,
   updateStructuredRequirements,
   updateStructuredRequirementsIfStatus,
   updateStatusIfCurrent,

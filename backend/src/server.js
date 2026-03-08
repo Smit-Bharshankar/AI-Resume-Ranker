@@ -6,6 +6,13 @@ import resumeRoutes from "./modules/resume/resume.routes.js";
 import { errorResponse } from "./utils/api-response.js";
 import logger from "./utils/logger.js";
 import { validateAiConfiguration } from "./modules/ai/providers/provider.factory.js";
+import {
+  sentryErrorHandler,
+  sentryRequestHandler,
+  sentryTracingHandler,
+  Sentry,
+} from "./monitoring/sentry.js";
+import { shutdownPosthog } from "./analytics/posthog.js";
 
 const app = express();
 const aiConfigHealth = validateAiConfiguration();
@@ -23,6 +30,9 @@ const allowedOrigins = [
   'https://app.sortres.com',
   'https://api.sortres.com'
 ];
+
+app.use(sentryRequestHandler);
+app.use(sentryTracingHandler);
 
 app.use(cors({
   origin: allowedOrigins,
@@ -43,6 +53,7 @@ app.get("/health", (req, res) => {
 
 app.use("/jobs", jobRoutes);
 app.use("/resumes", resumeRoutes);
+app.use(sentryErrorHandler);
 
 app.use((req, res) => {
   return res.status(404).json(errorResponse("Route not found"));
@@ -70,14 +81,17 @@ const server = app.listen(env.port, () => {
 });
 
 process.on("unhandledRejection", (error) => {
+  Sentry.captureException(error);
   logger.error("Unhandled rejection", {
     error: error instanceof Error ? error.message : String(error),
   });
 });
 
 process.on("uncaughtException", (error) => {
+  Sentry.captureException(error);
   logger.error("Uncaught exception", { error: error.message });
   server.close(() => {
+    void shutdownPosthog();
     process.exit(1);
   });
 });

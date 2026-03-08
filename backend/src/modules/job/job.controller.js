@@ -3,6 +3,7 @@ import resumeService from "../resume/resume.service.js";
 import { successResponse, errorResponse } from "../../utils/api-response.js";
 import { handleControllerError } from "../../utils/error-handler.js";
 import { enqueueJobRequirementsExtraction } from "../../queue/jobExtractionQueue.js";
+import { capturePosthogEvent } from "../../analytics/posthog.js";
 import {
   JobSchemaValidationError,
   validateJobStructuredRequirements,
@@ -79,7 +80,7 @@ const extractRequirements = async (req, res) => {
     }
 
     try {
-      await enqueueJobRequirementsExtraction({ jobId: id });
+      await enqueueJobRequirementsExtraction({ jobId: id, userId: req.user.id });
     } catch (error) {
       await jobService.updateStatusIfCurrent({
         id,
@@ -89,6 +90,16 @@ const extractRequirements = async (req, res) => {
       });
       throw error;
     }
+
+    capturePosthogEvent({
+      distinctId: req.user.id,
+      event: "analysis_started",
+      properties: {
+        analysis_type: "requirements_extraction",
+        job_id: id,
+        source: "api",
+      },
+    });
 
     return res.status(200).json({
       success: true,

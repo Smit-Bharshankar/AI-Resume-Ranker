@@ -33,7 +33,11 @@ const uploadResumesForJob = async ({ userId, jobId, files }) => {
         status: "UPLOADED",
       });
 
-      await enqueueResumeExtraction({ resumeId: createdResume.id });
+      await enqueueResumeExtraction({
+        resumeId: createdResume.id,
+        userId,
+        jobId,
+      });
       uploaded += 1;
     } catch (error) {
       failed += 1;

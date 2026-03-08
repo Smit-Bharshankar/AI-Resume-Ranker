@@ -19,10 +19,10 @@ const insightQueue = new Queue(env.resumeInsightQueueName, {
   },
 });
 
-const enqueueResumeInsightGeneration = async ({ resumeId }) => {
+const enqueueResumeInsightGeneration = async ({ resumeId, userId, jobId }) => {
   return insightQueue.add(
     "generate-resume-insights",
-    { resumeId },
+    { resumeId, userId, jobId },
     {
       jobId: resumeId,
     },

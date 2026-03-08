@@ -2,6 +2,7 @@ import { Queue } from "bullmq";
 import IORedis from "ioredis";
 import env from "../config/env.js";
 import logger from "../utils/logger.js";
+import { Sentry } from "../monitoring/sentry.js";
 
 const redisConnectionOptions = {
   maxRetriesPerRequest: null,
@@ -41,6 +42,15 @@ if (env.redisUrl && !isUsableRedisUrl(env.redisUrl)) {
   });
 }
 
+connection.on("error", (error) => {
+  Sentry.captureException(error, {
+    tags: {
+      component: "redis",
+      queue: env.resumeQueueName,
+    },
+  });
+});
+
 const resumeQueue = new Queue(env.resumeQueueName, {
   connection,
   defaultJobOptions: {
@@ -58,10 +68,10 @@ const resumeQueue = new Queue(env.resumeQueueName, {
   },
 });
 
-const enqueueResumeExtraction = async ({ resumeId }) => {
+const enqueueResumeExtraction = async ({ resumeId, userId, jobId }) => {
   return resumeQueue.add(
     "extract-resume-text",
-    { resumeId },
+    { resumeId, userId, jobId },
     {
       jobId: resumeId,
     },

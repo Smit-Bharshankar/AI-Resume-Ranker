@@ -39,6 +39,10 @@ const getResumeById = async (id, userId) => {
   return resumeRepository.getResumeById(id, userId);
 };
 
+const getResumeOwnerContext = async (id) => {
+  return resumeRepository.getResumeOwnerContext(id);
+};
+
 const completeTextExtraction = async ({ id, rawText }) => {
   return resumeRepository.completeTextExtraction({ id, rawText });
 };
@@ -110,6 +114,7 @@ const resumeService = {
   updateRawText,
   updateStructuredData,
   getResumeById,
+  getResumeOwnerContext,
   completeTextExtraction,
   markExtractionFailed,
   completeStructureExtraction,

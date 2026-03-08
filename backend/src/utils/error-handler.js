@@ -1,5 +1,6 @@
 import { errorResponse } from "./api-response.js";
 import { Prisma } from "../../generated/prisma/index.js";
+import { Sentry } from "../monitoring/sentry.js";
 
 export const handleControllerError = (res, error, fallbackMessage) => {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -23,8 +24,11 @@ export const handleControllerError = (res, error, fallbackMessage) => {
   }
 
   if (error instanceof Prisma.PrismaClientInitializationError) {
+    Sentry.captureException(error);
     return res.status(503).json(errorResponse("Database unavailable"));
   }
+
+  Sentry.captureException(error);
 
   return res
     .status(500)
