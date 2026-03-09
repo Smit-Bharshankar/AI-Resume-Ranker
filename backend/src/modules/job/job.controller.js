@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from "../../utils/api-response.js";
 import { handleControllerError } from "../../utils/error-handler.js";
 import { enqueueJobRequirementsExtraction } from "../../queue/jobExtractionQueue.js";
 import { capturePosthogEvent } from "../../analytics/posthog.js";
+import { trackLifecycle } from "../../monitoring/lifecycleTracker.js";
 import {
   JobSchemaValidationError,
   validateJobStructuredRequirements,
@@ -79,14 +80,61 @@ const extractRequirements = async (req, res) => {
       return res.status(409).json(errorResponse("Job status changed, please retry"));
     }
 
+    void trackLifecycle({
+      entityType: "job",
+      entityId: id,
+      runId: id,
+      event: "status_changed",
+      status: "extracting_requirements",
+      stage: "queued",
+      attempt: 0,
+      maxAttempts: 1,
+      retries: 0,
+      progressPct: 5,
+      worker: "api",
+      message: "Job moved to EXTRACTING_REQUIREMENTS",
+      isTerminal: false,
+    });
+
     try {
       await enqueueJobRequirementsExtraction({ jobId: id, userId: req.user.id });
+      void trackLifecycle({
+        entityType: "job",
+        entityId: id,
+        runId: id,
+        event: "queued",
+        status: "extracting_requirements",
+        stage: "queued",
+        attempt: 0,
+        maxAttempts: 1,
+        retries: 0,
+        progressPct: 10,
+        worker: "api",
+        message: "Job extraction queued",
+        isTerminal: false,
+      });
     } catch (error) {
       await jobService.updateStatusIfCurrent({
         id,
         currentStatus: "EXTRACTING_REQUIREMENTS",
         nextStatus: job.status,
         userId: req.user.id,
+      });
+      void trackLifecycle({
+        entityType: "job",
+        entityId: id,
+        runId: id,
+        event: "enqueue_failed",
+        status: String(job.status).toLowerCase(),
+        stage: "queue",
+        attempt: 0,
+        maxAttempts: 1,
+        retries: 0,
+        progressPct: 0,
+        worker: "api",
+        message: "Queue enqueue failed, status rolled back",
+        error: error.message,
+        isTerminal: true,
       });
       throw error;
     }

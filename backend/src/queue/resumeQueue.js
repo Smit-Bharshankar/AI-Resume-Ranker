@@ -68,7 +68,27 @@ const resumeQueue = new Queue(env.resumeQueueName, {
   },
 });
 
+const getReusableExistingJob = async (jobId) => {
+  const existingJob = await resumeQueue.getJob(jobId);
+  if (!existingJob) {
+    return null;
+  }
+
+  const state = await existingJob.getState();
+  if (state === "failed" || state === "completed") {
+    await existingJob.remove();
+    return null;
+  }
+
+  return existingJob;
+};
+
 const enqueueResumeExtraction = async ({ resumeId, userId, jobId }) => {
+  const existing = await getReusableExistingJob(resumeId);
+  if (existing) {
+    return existing;
+  }
+
   return resumeQueue.add(
     "extract-resume-text",
     { resumeId, userId, jobId },

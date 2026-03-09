@@ -19,7 +19,27 @@ const jobExtractionQueue = new Queue(env.jobExtractionQueueName, {
   },
 });
 
+const getReusableExistingJob = async (jobId) => {
+  const existingJob = await jobExtractionQueue.getJob(jobId);
+  if (!existingJob) {
+    return null;
+  }
+
+  const state = await existingJob.getState();
+  if (state === "failed" || state === "completed") {
+    await existingJob.remove();
+    return null;
+  }
+
+  return existingJob;
+};
+
 const enqueueJobRequirementsExtraction = async ({ jobId, userId }) => {
+  const existing = await getReusableExistingJob(jobId);
+  if (existing) {
+    return existing;
+  }
+
   return jobExtractionQueue.add(
     "extract-job-requirements",
     { jobId, userId },
