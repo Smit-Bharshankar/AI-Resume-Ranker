@@ -124,7 +124,7 @@ function ResumeViewerComponent({
               key={frameSrc}
               title={`Resume PDF ${resumeId}`}
               src={frameSrc}
-              className="h-[720px] w-full"
+              className="h-[890px] w-full"
               loading="lazy"
               onLoad={handleFrameLoad}
               onError={handleFrameError}

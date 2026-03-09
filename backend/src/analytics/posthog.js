@@ -21,16 +21,18 @@ const capturePosthogEvent = ({
     return;
   }
 
-  void posthog.capture({
-    distinctId,
-    event,
-    properties,
-  }).catch((error) => {
+  try {
+    posthog.capture({
+      distinctId,
+      event,
+      properties,
+    });
+  } catch (error) {
     logger.warn("PostHog capture failed", {
       event,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     });
-  });
+  }
 };
 
 const shutdownPosthog = async () => {
