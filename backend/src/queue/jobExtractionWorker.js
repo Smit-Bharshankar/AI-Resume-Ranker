@@ -7,7 +7,7 @@ import { Sentry } from "../monitoring/sentry.js";
 import { capturePosthogEvent } from "../analytics/posthog.js";
 import jobService from "../modules/job/job.service.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
-import { trackLifecycle } from "../monitoring/lifecycleTracker.js";
+import { withProcessTimeout } from "./processorTimeout.js";
 
 const isRetriableError = (error) => {
   return error?.retryable === true;
@@ -39,23 +39,6 @@ const processJobExtraction = async (job) => {
   const maxAttempts = job.opts.attempts ?? env.jobExtractionQueueAttempts;
   const retries = Math.max(0, attempt - 1);
 
-  void trackLifecycle({
-    entityType: "job",
-    entityId: jobId,
-    runId: jobId,
-    event: "stage_started",
-    status: "extracting_requirements",
-    stage: "requirements_extraction",
-    attempt,
-    maxAttempts,
-    retries,
-    progressPct: 40,
-    queueJobId: String(job.id ?? ""),
-    worker: "jobExtractionWorker",
-    message: "Job requirements extraction started",
-    isTerminal: false,
-  });
-
   baseLogger.info("Job requirements extraction started");
   capturePosthogEvent({
     distinctId,
@@ -70,22 +53,6 @@ const processJobExtraction = async (job) => {
 
   try {
     const result = await jobExtractionService.process(jobId);
-    void trackLifecycle({
-      entityType: "job",
-      entityId: jobId,
-      runId: jobId,
-      event: "stage_completed",
-      status: "requirements_structured",
-      stage: "requirements_extraction",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: 100,
-      queueJobId: String(job.id ?? ""),
-      worker: "jobExtractionWorker",
-      message: "Job requirements extraction completed",
-      isTerminal: true,
-    });
     capturePosthogEvent({
       distinctId,
       event: "analysis_completed",
@@ -107,25 +74,6 @@ const processJobExtraction = async (job) => {
     const attempts = job.opts.attempts ?? env.jobExtractionQueueAttempts;
     const isFinalAttempt = job.attemptsMade + 1 >= attempts;
     const retryable = isRetriableError(error);
-    void trackLifecycle({
-      entityType: "job",
-      entityId: jobId,
-      runId: jobId,
-      event: isFinalAttempt || !retryable ? "failed" : "retry_scheduled",
-      status: isFinalAttempt || !retryable ? "failed_structure" : "retrying",
-      stage: "requirements_extraction",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: isFinalAttempt ? 100 : 40,
-      queueJobId: String(job.id ?? ""),
-      worker: "jobExtractionWorker",
-      message: isFinalAttempt || !retryable
-        ? "Job requirements extraction failed"
-        : "Job requirements extraction retry scheduled",
-      error: error.message,
-      isTerminal: isFinalAttempt || !retryable,
-    });
     Sentry.captureException(error, {
       tags: {
         queue: env.jobExtractionQueueName,
@@ -175,10 +123,22 @@ const processJobExtraction = async (job) => {
   }
 };
 
-const worker = new Worker(env.jobExtractionQueueName, processJobExtraction, {
-  connection,
-  concurrency: env.jobExtractionWorkerConcurrency,
-});
+const processJobExtractionWithTimeout = async (job) => {
+  return withProcessTimeout({
+    operation: () => processJobExtraction(job),
+    timeoutMs: env.jobExtractionProcessTimeoutMs,
+    processName: "Job requirements extraction",
+  });
+};
+
+const worker = new Worker(
+  env.jobExtractionQueueName,
+  processJobExtractionWithTimeout,
+  {
+    connection,
+    concurrency: env.jobExtractionWorkerConcurrency,
+  },
+);
 
 worker.on("error", (error) => {
   Sentry.captureException(error, {
@@ -227,6 +187,7 @@ worker.on("failed", (job, error) => {
 logger.info("Job extraction worker started", {
   queue: env.jobExtractionQueueName,
   concurrency: env.jobExtractionWorkerConcurrency,
+  processTimeoutMs: env.jobExtractionProcessTimeoutMs,
 });
 
 process.on("unhandledRejection", (error) => {

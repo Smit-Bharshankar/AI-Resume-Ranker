@@ -7,7 +7,7 @@ import { Sentry } from "../monitoring/sentry.js";
 import { capturePosthogEvent } from "../analytics/posthog.js";
 import resumeService from "../modules/resume/resume.service.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
-import { trackLifecycle } from "../monitoring/lifecycleTracker.js";
+import { withProcessTimeout } from "./processorTimeout.js";
 
 const resolveOwnerContextSafe = async ({ resumeId, jobUserId, payloadJobId }) => {
   if (typeof jobUserId === "string") {
@@ -57,22 +57,6 @@ const processInsightJob = async (job) => {
   const retries = Math.max(0, attempt - 1);
 
   baseLogger.info("Resume insight generation started");
-  void trackLifecycle({
-    entityType: "resume",
-    entityId: resumeId,
-    runId: resumeId,
-    event: "stage_started",
-    status: "insights_generating",
-    stage: "insights_generation",
-    attempt,
-    maxAttempts,
-    retries,
-    progressPct: 90,
-    queueJobId: String(job.id ?? ""),
-    worker: "insightWorker",
-    message: "Insights generation started",
-    isTerminal: false,
-  });
   capturePosthogEvent({
     distinctId,
     event: "analysis_started",
@@ -87,22 +71,6 @@ const processInsightJob = async (job) => {
 
   try {
     const result = await insightService.process(resumeId);
-    void trackLifecycle({
-      entityType: "resume",
-      entityId: resumeId,
-      runId: resumeId,
-      event: "stage_completed",
-      status: "insights_generated",
-      stage: "insights_generation",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: 100,
-      queueJobId: String(job.id ?? ""),
-      worker: "insightWorker",
-      message: "Insights generation completed",
-      isTerminal: true,
-    });
     capturePosthogEvent({
       distinctId,
       event: "analysis_completed",
@@ -128,25 +96,6 @@ const processInsightJob = async (job) => {
     if (isFinalAttempt) {
       void resumeService.markInsightsFailed(resumeId);
     }
-    void trackLifecycle({
-      entityType: "resume",
-      entityId: resumeId,
-      runId: resumeId,
-      event: isFinalAttempt ? "failed" : "retry_scheduled",
-      status: isFinalAttempt ? "failed_insights" : "retrying",
-      stage: "insights_generation",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: isFinalAttempt ? 100 : 90,
-      queueJobId: String(job.id ?? ""),
-      worker: "insightWorker",
-      message: isFinalAttempt
-        ? "Insights generation failed on final attempt"
-        : "Insights generation retry scheduled",
-      error: error.message,
-      isTerminal: isFinalAttempt,
-    });
     Sentry.captureException(error, {
       tags: {
         queue: env.resumeInsightQueueName,
@@ -189,7 +138,15 @@ const processInsightJob = async (job) => {
   }
 };
 
-const worker = new Worker(env.resumeInsightQueueName, processInsightJob, {
+const processInsightJobWithTimeout = async (job) => {
+  return withProcessTimeout({
+    operation: () => processInsightJob(job),
+    timeoutMs: env.resumeInsightProcessTimeoutMs,
+    processName: "Resume insight generation",
+  });
+};
+
+const worker = new Worker(env.resumeInsightQueueName, processInsightJobWithTimeout, {
   connection,
   concurrency: env.resumeInsightWorkerConcurrency,
 });
@@ -215,25 +172,6 @@ worker.on("failed", (job, error) => {
   if (isFinalAttempt && job?.data?.resumeId) {
     void resumeService.markInsightsFailed(job.data.resumeId);
   }
-  void trackLifecycle({
-    entityType: "resume",
-    entityId: job?.data?.resumeId ?? "",
-    runId: job?.data?.resumeId ?? "",
-    event: isFinalAttempt ? "failed" : "retry_scheduled",
-    status: isFinalAttempt ? "failed_insights" : "retrying",
-    stage: "insight_worker_failed",
-    attempt,
-    maxAttempts: attempts,
-    retries,
-    progressPct: isFinalAttempt ? 100 : 90,
-    queueJobId: String(job?.id ?? ""),
-    worker: "insightWorker",
-    message: isFinalAttempt
-      ? "Insight worker failed on final attempt"
-      : "Insight worker retry scheduled",
-    error: error.message,
-    isTerminal: isFinalAttempt,
-  });
   Sentry.captureException(error, {
     tags: {
       queue: env.resumeInsightQueueName,
@@ -268,6 +206,7 @@ worker.on("failed", (job, error) => {
 logger.info("Insight worker started", {
   queue: env.resumeInsightQueueName,
   concurrency: env.resumeInsightWorkerConcurrency,
+  processTimeoutMs: env.resumeInsightProcessTimeoutMs,
 });
 
 process.on("unhandledRejection", (error) => {

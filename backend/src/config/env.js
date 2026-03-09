@@ -57,6 +57,10 @@ const env = {
   resumeQueueAttempts: toNumber(process.env.RESUME_QUEUE_ATTEMPTS, 3),
   resumeQueueBackoffMs: toNumber(process.env.RESUME_QUEUE_BACKOFF_MS, 2000),
   resumeWorkerConcurrency: toNumber(process.env.RESUME_WORKER_CONCURRENCY, 3),
+  resumeProcessTimeoutMs: toNumber(
+    process.env.RESUME_PROCESS_TIMEOUT_MS,
+    10 * 60 * 1000,
+  ),
   resumeInsightQueueName:
     process.env.RESUME_INSIGHT_QUEUE_NAME ?? "resume-insight-generation",
   resumeInsightQueueAttempts: toNumber(
@@ -71,6 +75,10 @@ const env = {
     process.env.RESUME_INSIGHT_WORKER_CONCURRENCY,
     4,
   ),
+  resumeInsightProcessTimeoutMs: toNumber(
+    process.env.RESUME_INSIGHT_PROCESS_TIMEOUT_MS,
+    5 * 60 * 1000,
+  ),
   jobExtractionQueueName:
     process.env.JOB_EXTRACTION_QUEUE_NAME ?? "job-requirements-extraction",
   jobExtractionQueueAttempts: toNumber(
@@ -84,6 +92,10 @@ const env = {
   jobExtractionWorkerConcurrency: toNumber(
     process.env.JOB_EXTRACTION_WORKER_CONCURRENCY,
     4,
+  ),
+  jobExtractionProcessTimeoutMs: toNumber(
+    process.env.JOB_EXTRACTION_PROCESS_TIMEOUT_MS,
+    5 * 60 * 1000,
   ),
   aiProvider,
   aiApiKey:

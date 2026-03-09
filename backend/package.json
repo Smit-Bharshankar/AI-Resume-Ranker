@@ -14,7 +14,6 @@
     "worker:job-extraction:dev": "nodemon src/queue/jobExtractionWorker.js",
     "ai:smoke": "node src/scripts/aiExtractionSmoke.js",
     "ai:smoke:key": "node src/scripts/aiExtractionSmoke.js",
-    "lifecycle:watch": "node src/scripts/lifecycleWatch.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -22,6 +21,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@bull-board/api": "^6.20.3",
+    "@bull-board/express": "^6.20.3",
     "@prisma/adapter-pg": "^7.4.1",
     "@prisma/client": "^7.4.1",
     "@sentry/node": "^10.42.0",

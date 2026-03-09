@@ -12,7 +12,7 @@ import { PDFParse } from "pdf-parse";
 import { Sentry } from "../monitoring/sentry.js";
 import { capturePosthogEvent } from "../analytics/posthog.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
-import { trackLifecycle } from "../monitoring/lifecycleTracker.js";
+import { withProcessTimeout } from "./processorTimeout.js";
 
 const resolveOwnerContextSafe = async ({ resumeId, jobUserId, payloadJobId }) => {
   if (typeof jobUserId === "string") {
@@ -73,22 +73,6 @@ const processResumeJob = async (job) => {
   const retries = Math.max(0, attempt - 1);
 
   baseJobLogger.info("Resume pipeline job started");
-  void trackLifecycle({
-    entityType: "resume",
-    entityId: resumeId,
-    runId: resumeId,
-    event: "stage_started",
-    status: "processing",
-    stage: "pipeline_start",
-    attempt,
-    maxAttempts,
-    retries,
-    progressPct: 5,
-    queueJobId: String(job.id ?? ""),
-    worker: "resumeWorker",
-    message: "Resume pipeline job started",
-    isTerminal: false,
-  });
 
   const { distinctId, relatedJobId } = await resolveOwnerContextSafe({
     resumeId,
@@ -121,22 +105,6 @@ const processResumeJob = async (job) => {
 
   if (resume.status === "UPLOADED") {
     const extractionStartedAtMs = Date.now();
-    void trackLifecycle({
-      entityType: "resume",
-      entityId: resumeId,
-      runId: resumeId,
-      event: "stage_started",
-      status: "uploaded",
-      stage: "text_extraction",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: 20,
-      queueJobId: String(job.id ?? ""),
-      worker: "resumeWorker",
-      message: "Text extraction started",
-      isTerminal: false,
-    });
     try {
       const fileBuffer = await supabaseStorage.downloadResume(resume.storagePath);
       const parser = new PDFParse({ data: fileBuffer });
@@ -171,22 +139,6 @@ const processResumeJob = async (job) => {
       jobLogger.info("Resume text extraction completed", {
         stage: "text_extraction",
         durationMs: Date.now() - extractionStartedAtMs,
-      });
-      void trackLifecycle({
-        entityType: "resume",
-        entityId: resumeId,
-        runId: resumeId,
-        event: "stage_completed",
-        status: "text_extracted",
-        stage: "text_extraction",
-        attempt,
-        maxAttempts,
-        retries,
-        progressPct: 35,
-        queueJobId: String(job.id ?? ""),
-        worker: "resumeWorker",
-        message: "Text extraction completed",
-        isTerminal: false,
       });
 
       capturePosthogEvent({
@@ -235,41 +187,7 @@ const processResumeJob = async (job) => {
 
       if (isFinalAttempt) {
         await resumeService.markExtractionFailed(resumeId);
-        void trackLifecycle({
-          entityType: "resume",
-          entityId: resumeId,
-          runId: resumeId,
-          event: "failed",
-          status: "failed_extraction",
-          stage: "text_extraction",
-          attempt,
-          maxAttempts,
-          retries,
-          progressPct: 100,
-          queueJobId: String(job.id ?? ""),
-          worker: "resumeWorker",
-          message: "Text extraction failed on final attempt",
-          error: error.message,
-          isTerminal: true,
-        });
       } else {
-        void trackLifecycle({
-          entityType: "resume",
-          entityId: resumeId,
-          runId: resumeId,
-          event: "retry_scheduled",
-          status: "retrying",
-          stage: "text_extraction",
-          attempt,
-          maxAttempts,
-          retries,
-          progressPct: 20,
-          queueJobId: String(job.id ?? ""),
-          worker: "resumeWorker",
-          message: "Text extraction retry scheduled",
-          error: error.message,
-          isTerminal: false,
-        });
       }
 
       throw error;
@@ -280,22 +198,6 @@ const processResumeJob = async (job) => {
 
   if (resume?.status === "TEXT_EXTRACTED") {
     const structuringStartedAtMs = Date.now();
-    void trackLifecycle({
-      entityType: "resume",
-      entityId: resumeId,
-      runId: resumeId,
-      event: "stage_started",
-      status: "text_extracted",
-      stage: "structuring",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: 45,
-      queueJobId: String(job.id ?? ""),
-      worker: "resumeWorker",
-      message: "Structuring started",
-      isTerminal: false,
-    });
     const structureResult = await resumeExtractionService.process(resumeId);
     jobLogger.info("Resume structuring stage finished", {
       stage: "structuring",
@@ -304,39 +206,7 @@ const processResumeJob = async (job) => {
     });
 
     if (structureResult?.status === "structured") {
-      void trackLifecycle({
-        entityType: "resume",
-        entityId: resumeId,
-        runId: resumeId,
-        event: "stage_completed",
-        status: "structured",
-        stage: "structuring",
-        attempt,
-        maxAttempts,
-        retries,
-        progressPct: 60,
-        queueJobId: String(job.id ?? ""),
-        worker: "resumeWorker",
-        message: "Structuring completed",
-        isTerminal: false,
-      });
       const scoringStartedAtMs = Date.now();
-      void trackLifecycle({
-        entityType: "resume",
-        entityId: resumeId,
-        runId: resumeId,
-        event: "stage_started",
-        status: "structured",
-        stage: "scoring",
-        attempt,
-        maxAttempts,
-        retries,
-        progressPct: 70,
-        queueJobId: String(job.id ?? ""),
-        worker: "resumeWorker",
-        message: "Scoring started",
-        isTerminal: false,
-      });
       const scoringResult = await resumeMatchingService.process(resumeId);
       jobLogger.info("Resume scoring stage finished", {
         stage: "scoring",
@@ -346,44 +216,12 @@ const processResumeJob = async (job) => {
       });
 
       if (scoringResult?.status === "scored") {
-        void trackLifecycle({
-          entityType: "resume",
-          entityId: resumeId,
-          runId: resumeId,
-          event: "stage_completed",
-          status: "scored",
-          stage: "scoring",
-          attempt,
-          maxAttempts,
-          retries,
-          progressPct: 80,
-          queueJobId: String(job.id ?? ""),
-          worker: "resumeWorker",
-          message: "Scoring completed",
-          isTerminal: false,
-        });
         try {
           await enqueueInsightsPipeline({
             resumeId,
             userId: distinctId,
             jobId: relatedJobId,
             jobLogger,
-          });
-          void trackLifecycle({
-            entityType: "resume",
-            entityId: resumeId,
-            runId: resumeId,
-            event: "queued",
-            status: "scored",
-            stage: "insights_queued",
-            attempt,
-            maxAttempts,
-            retries,
-            progressPct: 85,
-            queueJobId: String(job.id ?? ""),
-            worker: "resumeWorker",
-            message: "Insights generation queued",
-            isTerminal: false,
           });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
@@ -409,22 +247,6 @@ const processResumeJob = async (job) => {
     }
 
     if (structureResult?.status === "failed") {
-      void trackLifecycle({
-        entityType: "resume",
-        entityId: resumeId,
-        runId: resumeId,
-        event: "failed",
-        status: "failed_structure",
-        stage: "structuring",
-        attempt,
-        maxAttempts,
-        retries,
-        progressPct: 100,
-        queueJobId: String(job.id ?? ""),
-        worker: "resumeWorker",
-        message: "Structuring failed",
-        isTerminal: true,
-      });
       capturePosthogEvent({
         distinctId,
         event: "analysis_completed",
@@ -488,22 +310,6 @@ const processResumeJob = async (job) => {
   }
 
   if (resume?.status === "STRUCTURED") {
-    void trackLifecycle({
-      entityType: "resume",
-      entityId: resumeId,
-      runId: resumeId,
-      event: "stage_started",
-      status: "structured",
-      stage: "scoring",
-      attempt,
-      maxAttempts,
-      retries,
-      progressPct: 70,
-      queueJobId: String(job.id ?? ""),
-      worker: "resumeWorker",
-      message: "Scoring started",
-      isTerminal: false,
-    });
     const scoringStartedAtMs = Date.now();
     const scoringResult = await resumeMatchingService.process(resumeId);
     jobLogger.info("Resume scoring stage finished from structured state", {
@@ -514,44 +320,12 @@ const processResumeJob = async (job) => {
     });
 
     if (scoringResult?.status === "scored") {
-      void trackLifecycle({
-        entityType: "resume",
-        entityId: resumeId,
-        runId: resumeId,
-        event: "stage_completed",
-        status: "scored",
-        stage: "scoring",
-        attempt,
-        maxAttempts,
-        retries,
-        progressPct: 80,
-        queueJobId: String(job.id ?? ""),
-        worker: "resumeWorker",
-        message: "Scoring completed",
-        isTerminal: false,
-      });
       try {
         await enqueueInsightsPipeline({
           resumeId,
           userId: distinctId,
           jobId: relatedJobId,
           jobLogger,
-        });
-        void trackLifecycle({
-          entityType: "resume",
-          entityId: resumeId,
-          runId: resumeId,
-          event: "queued",
-          status: "scored",
-          stage: "insights_queued",
-          attempt,
-          maxAttempts,
-          retries,
-          progressPct: 85,
-          queueJobId: String(job.id ?? ""),
-          worker: "resumeWorker",
-          message: "Insights generation queued",
-          isTerminal: false,
         });
       } catch (error) {
         jobLogger.error("Failed to enqueue resume insights", {
@@ -584,22 +358,6 @@ const processResumeJob = async (job) => {
         jobId: relatedJobId,
         jobLogger,
       });
-      void trackLifecycle({
-        entityType: "resume",
-        entityId: resumeId,
-        runId: resumeId,
-        event: "queued",
-        status: "scored",
-        stage: "insights_queued",
-        attempt,
-        maxAttempts,
-        retries,
-        progressPct: 85,
-        queueJobId: String(job.id ?? ""),
-        worker: "resumeWorker",
-        message: "Insights generation queued",
-        isTerminal: false,
-      });
     } catch (error) {
       jobLogger.error("Failed to enqueue resume insights from scored state", {
         stage: "insights_enqueue",
@@ -628,7 +386,15 @@ const processResumeJob = async (job) => {
   });
 };
 
-const worker = new Worker(env.resumeQueueName, processResumeJob, {
+const processResumeJobWithTimeout = async (job) => {
+  return withProcessTimeout({
+    operation: () => processResumeJob(job),
+    timeoutMs: env.resumeProcessTimeoutMs,
+    processName: "Resume pipeline",
+  });
+};
+
+const worker = new Worker(env.resumeQueueName, processResumeJobWithTimeout, {
   connection,
   concurrency: env.resumeWorkerConcurrency,
 });
@@ -665,25 +431,6 @@ worker.on("failed", (job, error) => {
   const attempt = (job?.attemptsMade ?? 0) + 1;
   const isFinalAttempt = attempt >= attempts;
   const retries = Math.max(0, attempt - 1);
-  void trackLifecycle({
-    entityType: "resume",
-    entityId: job?.data?.resumeId ?? "",
-    runId: job?.data?.resumeId ?? "",
-    event: isFinalAttempt ? "failed" : "retry_scheduled",
-    status: isFinalAttempt ? "failed_resume_pipeline" : "retrying",
-    stage: "resume_worker_failed",
-    attempt,
-    maxAttempts: attempts,
-    retries,
-    progressPct: isFinalAttempt ? 100 : 20,
-    queueJobId: String(job?.id ?? ""),
-    worker: "resumeWorker",
-    message: isFinalAttempt
-      ? "Resume worker failed on final attempt"
-      : "Resume worker retry scheduled",
-    error: error.message,
-    isTerminal: isFinalAttempt,
-  });
   Sentry.captureException(error, {
     tags: {
       queue: env.resumeQueueName,
@@ -718,6 +465,7 @@ worker.on("failed", (job, error) => {
 logger.info("Resume worker started", {
   queue: env.resumeQueueName,
   concurrency: env.resumeWorkerConcurrency,
+  processTimeoutMs: env.resumeProcessTimeoutMs,
 });
 
 process.on("unhandledRejection", (error) => {
