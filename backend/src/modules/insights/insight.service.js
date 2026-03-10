@@ -6,9 +6,11 @@ import getAiProvider from "../ai/providers/provider.factory.js";
 import { parseJsonFromCompletion } from "../ai/json.parser.js";
 import { buildInsightPrompt } from "./insightPrompt.builder.js";
 import {
+  INSIGHT_JSON_SCHEMA,
   InsightSchemaValidationError,
   validateInsightPayload,
 } from "./insightSchema.validator.js";
+import { buildFailureRecord, resolveFailureReason } from "../ai/failureReason.js";
 
 const MAX_AI_RETRIES = 2;
 
@@ -89,6 +91,9 @@ const requestInsights = async ({
     systemPrompt,
     userPrompt,
     temperature: 0.1,
+    responseSchema: INSIGHT_JSON_SCHEMA,
+    schemaName: "resume_insights",
+    rateLimitBucket: "insights",
   });
 
   logger.info("Resume insight AI response received", {
@@ -154,22 +159,49 @@ const process = async (resumeId) => {
   }
 
   if (!isPlainObject(resume.structuredData) || !isPlainObject(resume.scoreBreakdown)) {
-    await resumeService.markInsightsFailed(resumeId);
+    const reason = {
+      code: "MISSING_STRUCTURED_RESUME_OR_SCORE",
+      retryable: false,
+      statusCode: null,
+      message: "Cannot generate insights without structured resume and score breakdown",
+    };
+    await resumeService.markInsightsFailed(
+      resumeId,
+      buildFailureRecord({ stage: "insights_generation", reason }),
+    );
     scopedLogger.error("Cannot generate insights without structured resume and score breakdown");
-    return { status: "failed" };
+    return { status: "failed", failureCode: reason.code, retryable: false };
   }
 
   const job = await jobService.getJobById(resume.jobId);
   if (!job) {
-    await resumeService.markInsightsFailed(resumeId);
+    const reason = {
+      code: "JOB_NOT_FOUND_FOR_INSIGHTS",
+      retryable: false,
+      statusCode: null,
+      message: "Cannot generate insights because job was not found",
+    };
+    await resumeService.markInsightsFailed(
+      resumeId,
+      buildFailureRecord({ stage: "insights_generation", reason }),
+    );
     scopedLogger.error("Cannot generate insights because job was not found");
-    return { status: "failed" };
+    return { status: "failed", failureCode: reason.code, retryable: false };
   }
 
   if (!isPlainObject(job.structuredRequirements)) {
-    await resumeService.markInsightsFailed(resumeId);
+    const reason = {
+      code: "MISSING_JOB_REQUIREMENTS",
+      retryable: false,
+      statusCode: null,
+      message: "Cannot generate insights due to missing structured requirements",
+    };
+    await resumeService.markInsightsFailed(
+      resumeId,
+      buildFailureRecord({ stage: "insights_generation", reason }),
+    );
     scopedLogger.error("Cannot generate insights due to missing structured requirements");
-    return { status: "failed" };
+    return { status: "failed", failureCode: reason.code, retryable: false };
   }
 
   for (let attempt = 0; attempt <= MAX_AI_RETRIES; attempt += 1) {
@@ -225,18 +257,30 @@ const process = async (resumeId) => {
       });
 
       if (isFinalAttempt || !retriable) {
-        await resumeService.markInsightsFailed(resumeId);
+        const reason = isValidationError
+          ? {
+              code: "INSIGHT_SCHEMA_VALIDATION_FAILED",
+              retryable: false,
+              statusCode: null,
+              message: error.message,
+            }
+          : resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
+        await resumeService.markInsightsFailed(
+          resumeId,
+          buildFailureRecord({ stage: "insights_generation", reason }),
+        );
         scopedLogger.error("Resume insights generation failed", {
           attempt: attemptNumber,
           maxRetries: MAX_AI_RETRIES,
           isFinalAttempt,
           retriable,
+          failureCode: reason.code,
           statusCode,
           errorCode: error?.code,
           durationMs: Date.now() - startedAtMs,
           error: error.message,
         });
-        return { status: "failed" };
+        return { status: "failed", failureCode: reason.code, retryable: false };
       }
 
       const delayMs = resolveRetryDelayMs(error, attempt);
@@ -244,8 +288,17 @@ const process = async (resumeId) => {
     }
   }
 
-  await resumeService.markInsightsFailed(resumeId);
-  return { status: "failed" };
+  const reason = {
+    code: "RESUME_INSIGHTS_FAILED",
+    retryable: false,
+    statusCode: null,
+    message: "Resume insights failed after retries",
+  };
+  await resumeService.markInsightsFailed(
+    resumeId,
+    buildFailureRecord({ stage: "insights_generation", reason }),
+  );
+  return { status: "failed", failureCode: reason.code, retryable: false };
 };
 
 const insightService = {

@@ -1,4 +1,5 @@
 import AIProvider from "./base.provider.js";
+import { waitForAiBudget } from "../rateBudget.js";
 
 const GEMINI_BASE_URL =
   "https://generativelanguage.googleapis.com/v1beta/models";
@@ -16,8 +17,61 @@ class GeminiProvider extends AIProvider {
     super({ provider: "gemini", ...options });
   }
 
-  async generateJson({ systemPrompt, userPrompt, temperature }) {
+  async requestGenerateContent({
+    systemPrompt,
+    userPrompt,
+    temperature,
+    responseSchema,
+    thinkingMode = "model-default",
+    signal,
+  }) {
+    const isGemini3Series = this.model.toLowerCase().includes("gemini-3");
+    const thinkingConfig =
+      thinkingMode === "none"
+        ? null
+        : thinkingMode === "level" || (thinkingMode === "model-default" && isGemini3Series)
+          ? { thinkingLevel: "minimal" }
+          : { thinkingBudget: 0 };
+
+    return fetch(
+      `${GEMINI_BASE_URL}/${this.model}:generateContent?key=${this.apiKey}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: userPrompt }],
+            },
+          ],
+          generationConfig: {
+            temperature,
+            maxOutputTokens: this.maxOutputTokens,
+            responseMimeType: "application/json",
+            ...(responseSchema ? { responseSchema } : {}),
+            ...(thinkingConfig ? { thinkingConfig } : {}),
+          },
+        }),
+        signal,
+      },
+    );
+  }
+
+  async generateJson({
+    systemPrompt,
+    userPrompt,
+    temperature,
+    responseSchema,
+    rateLimitBucket,
+  }) {
     this.assertConfigured();
+    await waitForAiBudget(rateLimitBucket ?? "default");
 
     const abortController = new AbortController();
     const timeout = setTimeout(() => {
@@ -25,35 +79,42 @@ class GeminiProvider extends AIProvider {
     }, this.timeoutMs);
 
     try {
-      const response = await fetch(
-        `${GEMINI_BASE_URL}/${this.model}:generateContent?key=${this.apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            systemInstruction: {
-              parts: [{ text: systemPrompt }],
-            },
-            contents: [
-              {
-                role: "user",
-                parts: [{ text: userPrompt }],
-              },
-            ],
-            generationConfig: {
-              temperature,
-              maxOutputTokens: this.maxOutputTokens,
-              responseMimeType: "application/json",
-              thinkingConfig: {
-                thinkingBudget: 0,
-              },
-            },
-          }),
+      const attempts = [
+        { responseSchema, thinkingMode: "model-default", label: "schema+modelThinking" },
+        { responseSchema: null, thinkingMode: "model-default", label: "json+modelThinking" },
+        { responseSchema: null, thinkingMode: "none", label: "json+noThinkingConfig" },
+      ];
+
+      let response = await this.requestGenerateContent({
+        systemPrompt,
+        userPrompt,
+        temperature,
+        responseSchema: attempts[0].responseSchema,
+        thinkingMode: attempts[0].thinkingMode,
+        signal: abortController.signal,
+      });
+      let requestVariant = attempts[0].label;
+      let previousFailures = [];
+
+      for (let index = 1; index < attempts.length && !response.ok && response.status === 400; index += 1) {
+        const failedBody = await response.text();
+        previousFailures.push({
+          variant: requestVariant,
+          status: response.status,
+          body: failedBody,
+        });
+
+        const nextAttempt = attempts[index];
+        requestVariant = nextAttempt.label;
+        response = await this.requestGenerateContent({
+          systemPrompt,
+          userPrompt,
+          temperature,
+          responseSchema: nextAttempt.responseSchema,
+          thinkingMode: nextAttempt.thinkingMode,
           signal: abortController.signal,
-        },
-      );
+        });
+      }
 
       if (!response.ok) {
         const body = await response.text();
@@ -64,6 +125,8 @@ class GeminiProvider extends AIProvider {
         error.code = "AI_PROVIDER_REQUEST_FAILED";
         error.headers = parseHeaders(response.headers);
         error.responseBody = body;
+        error.requestVariant = requestVariant;
+        error.previousFailures = previousFailures;
         throw error;
       }
 

@@ -10,6 +10,23 @@ const ALLOWED_KEYS = [
   "certifications",
 ];
 
+const STRUCTURED_RESUME_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ALLOWED_KEYS,
+  properties: {
+    name: { type: "string" },
+    email: { type: "string" },
+    phone: { type: "string" },
+    location: { type: "string" },
+    total_years_experience: { type: "number" },
+    skills: { type: "array", items: { type: "string" } },
+    primary_roles: { type: "array", items: { type: "string" } },
+    education: { type: "array", items: { type: "string" } },
+    certifications: { type: "array", items: { type: "string" } },
+  },
+};
+
 class ValidationError extends Error {
   constructor(message, metadata = {}) {
     super(message);
@@ -27,24 +44,26 @@ const isPlainObject = (value) => {
   );
 };
 
-const ensureString = (value, key) => {
-  if (typeof value !== "string") {
-    throw new ValidationError(`${key} must be a string`, { key });
+const ensureString = (value) => {
+  if (typeof value === "string") {
+    return value.trim();
   }
 
-  return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value).trim();
+  }
+
+  return "";
 };
 
-const ensureStringArray = (value, key) => {
+const ensureStringArray = (value) => {
   if (!Array.isArray(value)) {
-    throw new ValidationError(`${key} must be an array`, { key });
+    return [];
   }
 
-  if (!value.every((item) => typeof item === "string")) {
-    throw new ValidationError(`${key} must be an array of strings`, { key });
-  }
-
-  return value.map((item) => item.trim()).filter(Boolean);
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
 };
 
 const normalizeItemToString = (item) => {
@@ -80,11 +99,10 @@ const normalizeItemToString = (item) => {
   return "";
 };
 
-const ensureTextArray = (value, key) => {
+const ensureTextArray = (value) => {
   if (!Array.isArray(value)) {
-    throw new ValidationError(`${key} must be an array`, { key });
+    return [];
   }
-
   return value.map(normalizeItemToString).filter(Boolean);
 };
 
@@ -101,39 +119,23 @@ const validateStructuredResume = (payload) => {
     throw new ValidationError("Structured payload must be a JSON object");
   }
 
-  const keys = Object.keys(payload);
-  const extraKeys = keys.filter((key) => !ALLOWED_KEYS.includes(key));
-  if (extraKeys.length > 0) {
-    throw new ValidationError("Structured payload contains unsupported keys", {
-      extraKeys,
-    });
-  }
-
-  const missingKeys = ALLOWED_KEYS.filter((key) => !(key in payload));
-  if (missingKeys.length > 0) {
-    throw new ValidationError("Structured payload is missing required keys", {
-      missingKeys,
-    });
-  }
-
-  const totalYears = payload.total_years_experience;
-  if (typeof totalYears !== "number" || !Number.isFinite(totalYears)) {
-    throw new ValidationError("total_years_experience must be a valid number", {
-      key: "total_years_experience",
-    });
-  }
+  const totalYearsCandidate = payload.total_years_experience;
+  const parsedTotalYears = Number(totalYearsCandidate);
+  const totalYears = Number.isFinite(parsedTotalYears) && parsedTotalYears >= 0
+    ? parsedTotalYears
+    : 0;
 
   return {
-    name: ensureString(payload.name, "name"),
-    email: ensureString(payload.email, "email"),
-    phone: ensureString(payload.phone, "phone"),
-    location: ensureString(payload.location, "location"),
+    name: ensureString(payload.name),
+    email: ensureString(payload.email),
+    phone: ensureString(payload.phone),
+    location: ensureString(payload.location),
     total_years_experience: totalYears,
-    skills: normalizeSkills(ensureStringArray(payload.skills, "skills")),
-    primary_roles: ensureTextArray(payload.primary_roles, "primary_roles"),
-    education: ensureTextArray(payload.education, "education"),
-    certifications: ensureTextArray(payload.certifications, "certifications"),
+    skills: normalizeSkills(ensureStringArray(payload.skills)),
+    primary_roles: ensureTextArray(payload.primary_roles),
+    education: ensureTextArray(payload.education),
+    certifications: ensureTextArray(payload.certifications),
   };
 };
 
-export { ValidationError, validateStructuredResume };
+export { ValidationError, STRUCTURED_RESUME_JSON_SCHEMA, validateStructuredResume };

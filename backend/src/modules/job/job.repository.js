@@ -18,6 +18,7 @@ const createJob = async ({ userId, title, rawDescription }) => {
       title,
       rawDescription,
       structuredRequirements: null,
+      lastProcessingFailure: null,
       status: "DRAFT",
     },
   });
@@ -104,6 +105,7 @@ const completeRequirementsExtraction = async ({
     data: {
       structuredRequirements,
       status: "REQUIREMENTS_STRUCTURED",
+      lastProcessingFailure: null,
     },
   });
 
@@ -114,6 +116,7 @@ const markRequirementsExtractionFailed = async ({
   id,
   currentStatus = "EXTRACTING_REQUIREMENTS",
   userId,
+  failure = null,
 }) => {
   const result = await prisma.job.updateMany({
     where: buildUserScopedWhere({
@@ -122,6 +125,7 @@ const markRequirementsExtractionFailed = async ({
     }, userId),
     data: {
       status: "FAILED_STRUCTURE",
+      lastProcessingFailure: failure,
     },
   });
 

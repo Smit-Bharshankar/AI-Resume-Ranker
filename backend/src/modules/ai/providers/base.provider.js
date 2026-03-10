@@ -25,7 +25,14 @@ class AIProvider {
   //   usage: { inputTokens?: number, outputTokens?: number, totalTokens?: number }
   // }
   // eslint-disable-next-line no-unused-vars
-  async generateJson({ systemPrompt, userPrompt, temperature }) {
+  async generateJson({
+    systemPrompt,
+    userPrompt,
+    temperature,
+    responseSchema,
+    schemaName,
+    rateLimitBucket,
+  }) {
     throw new Error("generateJson must be implemented by provider");
   }
 }

@@ -1,5 +1,34 @@
 import prisma from "../../config/prisma.js";
 
+const toFailureRecord = (failure, { stage, code, message }) => {
+  if (
+    failure &&
+    typeof failure === "object" &&
+    !Array.isArray(failure)
+  ) {
+    return {
+      code: typeof failure.code === "string" ? failure.code : code,
+      retryable: Boolean(failure.retryable),
+      statusCode: Number.isFinite(failure.statusCode) ? failure.statusCode : null,
+      stage: typeof failure.stage === "string" ? failure.stage : stage,
+      message: typeof failure.message === "string" ? failure.message : message,
+      at:
+        typeof failure.at === "string" && failure.at
+          ? failure.at
+          : new Date().toISOString(),
+    };
+  }
+
+  return {
+    code,
+    retryable: false,
+    statusCode: null,
+    stage,
+    message,
+    at: new Date().toISOString(),
+  };
+};
+
 const withJobUserScope = (where, userId) => {
   if (!userId) {
     return where;
@@ -30,6 +59,7 @@ const createResume = async ({
       rawText,
       structuredData,
       insights,
+      lastProcessingFailure: null,
       status,
       score,
       scoreBreakdown,
@@ -95,22 +125,33 @@ const completeTextExtraction = async ({ id, rawText }) => {
     data: {
       rawText,
       status: "TEXT_EXTRACTED",
+      lastProcessingFailure: null,
     },
   });
 
   return result.count > 0;
 };
 
-const markExtractionFailed = async (id) => {
-  return prisma.resume.updateMany({
+const markExtractionFailed = async (id, failure = null) => {
+  const failureRecord = toFailureRecord(failure, {
+    stage: "text_extraction",
+    code: "RESUME_TEXT_EXTRACTION_FAILED",
+    message: "Resume text extraction failed",
+  });
+  const result = await prisma.resume.updateMany({
     where: {
       id,
-      status: "UPLOADED",
+      status: {
+        in: ["UPLOADED", "FAILED_EXTRACTION"],
+      },
     },
     data: {
       status: "FAILED_EXTRACTION",
+      lastProcessingFailure: failureRecord,
     },
   });
+
+  return result.count > 0;
 };
 
 const completeStructureExtraction = async ({ id, structuredData }) => {
@@ -122,20 +163,29 @@ const completeStructureExtraction = async ({ id, structuredData }) => {
     data: {
       structuredData,
       status: "STRUCTURED",
+      lastProcessingFailure: null,
     },
   });
 
   return result.count > 0;
 };
 
-const markStructureFailed = async (id) => {
+const markStructureFailed = async (id, failure = null) => {
+  const failureRecord = toFailureRecord(failure, {
+    stage: "structuring",
+    code: "RESUME_STRUCTURING_FAILED",
+    message: "Resume structuring failed",
+  });
   const result = await prisma.resume.updateMany({
     where: {
       id,
-      status: "TEXT_EXTRACTED",
+      status: {
+        in: ["TEXT_EXTRACTED", "FAILED_STRUCTURE"],
+      },
     },
     data: {
       status: "FAILED_STRUCTURE",
+      lastProcessingFailure: failureRecord,
     },
   });
 
@@ -152,20 +202,29 @@ const completeScoring = async ({ id, score, scoreBreakdown }) => {
       score,
       scoreBreakdown,
       status: "SCORED",
+      lastProcessingFailure: null,
     },
   });
 
   return result.count > 0;
 };
 
-const markScoringFailed = async (id) => {
+const markScoringFailed = async (id, failure = null) => {
+  const failureRecord = toFailureRecord(failure, {
+    stage: "scoring",
+    code: "RESUME_SCORING_FAILED",
+    message: "Resume scoring failed",
+  });
   const result = await prisma.resume.updateMany({
     where: {
       id,
-      status: "STRUCTURED",
+      status: {
+        in: ["STRUCTURED", "FAILED_SCORING"],
+      },
     },
     data: {
       status: "FAILED_SCORING",
+      lastProcessingFailure: failureRecord,
     },
   });
 
@@ -195,20 +254,29 @@ const completeInsightsGeneration = async ({ id, insights }) => {
     data: {
       insights,
       status: "INSIGHTS_GENERATED",
+      lastProcessingFailure: null,
     },
   });
 
   return result.count > 0;
 };
 
-const markInsightsFailed = async (id) => {
+const markInsightsFailed = async (id, failure = null) => {
+  const failureRecord = toFailureRecord(failure, {
+    stage: "insights_generation",
+    code: "RESUME_INSIGHTS_FAILED",
+    message: "Resume insights generation failed",
+  });
   const result = await prisma.resume.updateMany({
     where: {
       id,
-      status: "INSIGHTS_GENERATING",
+      status: {
+        in: ["SCORED", "INSIGHTS_GENERATING", "FAILED_INSIGHTS"],
+      },
     },
     data: {
       status: "FAILED_INSIGHTS",
+      lastProcessingFailure: failureRecord,
     },
   });
 

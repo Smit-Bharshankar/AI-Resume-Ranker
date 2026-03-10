@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 import env from "../config/env.js";
 import logger from "../utils/logger.js";
 import { connection } from "./resumeQueue.js";
@@ -53,6 +53,21 @@ const processJobExtraction = async (job) => {
 
   try {
     const result = await jobExtractionService.process(jobId);
+    if (result?.status === "failed") {
+      const reason = {
+        code: result.failureCode ?? "JOB_REQUIREMENTS_EXTRACTION_FAILED",
+        retryable: Boolean(result.retryable),
+        statusCode: null,
+        message: "Job requirements extraction failed",
+      };
+      if (!reason.retryable) {
+        throw new UnrecoverableError(`${reason.code}: ${reason.message}`);
+      }
+      const failureError = new Error(reason.message);
+      failureError.code = reason.code;
+      failureError.retryable = reason.retryable;
+      throw failureError;
+    }
     capturePosthogEvent({
       distinctId,
       event: "analysis_completed",
@@ -109,6 +124,7 @@ const processJobExtraction = async (job) => {
     });
 
     baseLogger.error("Job requirements extraction failed", {
+      failureCode: error?.code ?? null,
       error: error.message,
       retryable,
       isFinalAttempt,
@@ -116,7 +132,9 @@ const processJobExtraction = async (job) => {
     });
 
     if (!retryable) {
-      return;
+      throw new UnrecoverableError(
+        `${error?.code ?? "JOB_REQUIREMENTS_EXTRACTION_FAILED"}: ${error.message}`,
+      );
     }
 
     throw error;
@@ -180,6 +198,7 @@ worker.on("failed", (job, error) => {
     queueJobId: job?.id,
     jobId: job?.data?.jobId,
     attemptsMade: job?.attemptsMade,
+    failureCode: error?.code ?? null,
     error: error.message,
   });
 });

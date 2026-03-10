@@ -5,6 +5,18 @@ const ALLOWED_KEYS = [
   "mandatory_keywords",
 ];
 
+const JOB_REQUIREMENTS_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ALLOWED_KEYS,
+  properties: {
+    required_skills: { type: "array", items: { type: "string" } },
+    preferred_skills: { type: "array", items: { type: "string" } },
+    minimum_experience_years: { type: "number" },
+    mandatory_keywords: { type: "array", items: { type: "string" } },
+  },
+};
+
 class JobSchemaValidationError extends Error {
   constructor(message, metadata = {}) {
     super(message);
@@ -106,4 +118,8 @@ const validateJobStructuredRequirements = (payload) => {
   };
 };
 
-export { JobSchemaValidationError, validateJobStructuredRequirements };
+export {
+  JobSchemaValidationError,
+  JOB_REQUIREMENTS_JSON_SCHEMA,
+  validateJobStructuredRequirements,
+};

@@ -2,9 +2,26 @@ import env from "../../config/env.js";
 import resumeService from "../resume/resume.service.js";
 import logger from "../../utils/logger.js";
 import { buildExtractionPrompt } from "./prompt.builder.js";
-import { ValidationError, validateStructuredResume } from "./schema.validator.js";
+import {
+  ValidationError,
+  STRUCTURED_RESUME_JSON_SCHEMA,
+  validateStructuredResume,
+} from "./schema.validator.js";
 import getAiProvider from "./providers/provider.factory.js";
 import { parseJsonFromCompletion } from "./json.parser.js";
+import {
+  buildFailureRecord,
+  getErrorStatus,
+  resolveFailureReason,
+} from "./failureReason.js";
+
+const truncateErrorText = (value, maxLength = 600) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  return value.length > maxLength ? `${value.slice(0, maxLength)}...` : value;
+};
 
 const sleep = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -62,6 +79,9 @@ const requestStructuredResume = async ({ resumeId, rawText }) => {
     systemPrompt,
     userPrompt,
     temperature: 0.1,
+    responseSchema: STRUCTURED_RESUME_JSON_SCHEMA,
+    schemaName: "structured_resume",
+    rateLimitBucket: "structuring",
   });
 
   logger.info("AI extraction response received", {
@@ -111,9 +131,18 @@ const process = async (resumeId) => {
   }
 
   if (!resume.rawText || typeof resume.rawText !== "string") {
+    const reason = {
+      code: "MISSING_RESUME_TEXT",
+      retryable: false,
+      statusCode: null,
+      message: "Cannot structure resume without extracted text",
+    };
     scopedLogger.error("Cannot structure resume without extracted text");
-    await resumeService.markStructureFailed(resumeId);
-    return { status: "failed" };
+    await resumeService.markStructureFailed(
+      resumeId,
+      buildFailureRecord({ stage: "structuring", reason }),
+    );
+    return { status: "failed", failureCode: reason.code, retryable: false };
   }
 
   const maxRetries = Math.max(0, env.aiExtractionMaxRetries);
@@ -155,24 +184,57 @@ const process = async (resumeId) => {
         isValidationError ||
         isInvalidJsonError ||
         isRetriableProviderError(error);
+      const errorStatus = getErrorStatus(error);
+      const providerResponseBody = truncateErrorText(error?.responseBody);
+      const providerRequestVariant = error?.requestVariant ?? null;
+      const providerPreviousFailures = Array.isArray(error?.previousFailures)
+        ? error.previousFailures.map((item) => ({
+            variant: item?.variant ?? null,
+            status: item?.status ?? null,
+            body: truncateErrorText(item?.body ?? "", 300),
+          }))
+        : null;
 
       scopedLogger.warn("Resume structured extraction attempt failed", {
         attempt: attemptNumber,
         maxRetries,
         retriable,
+        errorStatus,
+        errorCode: error?.code,
+        providerRequestVariant,
+        providerPreviousFailures,
+        providerResponseBody,
         error: error.message,
       });
 
       if (isConfigError || isFinalAttempt || !retriable) {
-        await resumeService.markStructureFailed(resumeId);
+        const reason = isValidationError
+          ? {
+              code: "RESUME_SCHEMA_VALIDATION_FAILED",
+              retryable: false,
+              statusCode: null,
+              message: error.message,
+            }
+          : resolveFailureReason(error, "RESUME_STRUCTURING_FAILED");
+        await resumeService.markStructureFailed(
+          resumeId,
+          buildFailureRecord({ stage: "structuring", reason }),
+        );
         scopedLogger.error("Resume structured extraction failed", {
           attempt: attemptNumber,
           maxRetries,
           isFinalAttempt: true,
+          failureCode: reason.code,
+          retryable: reason.retryable,
+          errorStatus,
+          errorCode: error?.code,
+          providerRequestVariant,
+          providerPreviousFailures,
+          providerResponseBody,
           error: error.message,
           durationMs: Date.now() - startedAtMs,
         });
-        return { status: "failed" };
+        return { status: "failed", failureCode: reason.code, retryable: false };
       }
 
       const rateLimitDelayMs = resolveRateLimitDelayMs(error);
@@ -182,8 +244,17 @@ const process = async (resumeId) => {
     }
   }
 
-  await resumeService.markStructureFailed(resumeId);
-  return { status: "failed" };
+  const reason = {
+    code: "RESUME_STRUCTURING_FAILED",
+    retryable: false,
+    statusCode: null,
+    message: "Resume structuring failed after retries",
+  };
+  await resumeService.markStructureFailed(
+    resumeId,
+    buildFailureRecord({ stage: "structuring", reason }),
+  );
+  return { status: "failed", failureCode: reason.code, retryable: false };
 };
 
 const resumeExtractionService = {

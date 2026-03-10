@@ -13,6 +13,22 @@ const ALLOWED_KEYS = [
   "recommendation",
 ];
 
+const INSIGHT_JSON_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ALLOWED_KEYS,
+  properties: {
+    summary: { type: "string" },
+    strengths: { type: "array", items: { type: "string" } },
+    weaknesses: { type: "array", items: { type: "string" } },
+    interview_questions: { type: "array", items: { type: "string" } },
+    recommendation: {
+      type: "string",
+      enum: ["STRONG_FIT", "GOOD_FIT", "MODERATE_FIT", "WEAK_FIT"],
+    },
+  },
+};
+
 class InsightSchemaValidationError extends Error {
   constructor(message, metadata = {}) {
     super(message);
@@ -32,18 +48,17 @@ const isPlainObject = (value) => {
 
 const normalizeArrayOfStrings = (value, key) => {
   if (!Array.isArray(value)) {
-    throw new InsightSchemaValidationError(`${key} must be an array`, { key });
-  }
-
-  if (!value.every((item) => typeof item === "string")) {
-    throw new InsightSchemaValidationError(`${key} must be an array of strings`, {
-      key,
-    });
+    return [];
   }
 
   const normalized = [];
   for (const item of value) {
-    const trimmed = item.trim();
+    const trimmed =
+      typeof item === "string"
+        ? item.trim()
+        : typeof item === "number" || typeof item === "boolean"
+          ? String(item).trim()
+          : "";
     if (!trimmed) {
       continue;
     }
@@ -55,17 +70,12 @@ const normalizeArrayOfStrings = (value, key) => {
 
 const validateInsightRecommendation = (value) => {
   if (typeof value !== "string") {
-    throw new InsightSchemaValidationError("recommendation must be a string", {
-      key: "recommendation",
-    });
+    return "MODERATE_FIT";
   }
 
-  const normalized = value.trim();
+  const normalized = value.trim().toUpperCase();
   if (!ALLOWED_RECOMMENDATIONS.has(normalized)) {
-    throw new InsightSchemaValidationError("recommendation must be a valid enum value", {
-      key: "recommendation",
-      allowed: [...ALLOWED_RECOMMENDATIONS],
-    });
+    return "MODERATE_FIT";
   }
 
   return normalized;
@@ -76,29 +86,15 @@ const validateInsightPayload = (payload) => {
     throw new InsightSchemaValidationError("Insights payload must be a JSON object");
   }
 
-  const payloadKeys = Object.keys(payload);
-  const extraKeys = payloadKeys.filter((key) => !ALLOWED_KEYS.includes(key));
-  if (extraKeys.length > 0) {
-    throw new InsightSchemaValidationError("Insights payload contains unsupported keys", {
-      extraKeys,
-    });
-  }
-
-  const missingKeys = ALLOWED_KEYS.filter((key) => !(key in payload));
-  if (missingKeys.length > 0) {
-    throw new InsightSchemaValidationError("Insights payload is missing required keys", {
-      missingKeys,
-    });
-  }
-
-  if (typeof payload.summary !== "string") {
-    throw new InsightSchemaValidationError("summary must be a string", {
-      key: "summary",
-    });
-  }
+  const summary =
+    typeof payload.summary === "string"
+      ? payload.summary.trim()
+      : typeof payload.summary === "number" || typeof payload.summary === "boolean"
+        ? String(payload.summary).trim()
+        : "";
 
   return {
-    summary: payload.summary.trim(),
+    summary,
     strengths: normalizeArrayOfStrings(payload.strengths, "strengths"),
     weaknesses: normalizeArrayOfStrings(payload.weaknesses, "weaknesses"),
     interview_questions: normalizeArrayOfStrings(
@@ -112,5 +108,6 @@ const validateInsightPayload = (payload) => {
 export {
   InsightSchemaValidationError,
   ALLOWED_RECOMMENDATIONS,
+  INSIGHT_JSON_SCHEMA,
   validateInsightPayload,
 };

@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 import { connection } from "./resumeQueue.js";
 import env from "../config/env.js";
 import resumeService from "../modules/resume/resume.service.js";
@@ -13,6 +13,13 @@ import { Sentry } from "../monitoring/sentry.js";
 import { capturePosthogEvent } from "../analytics/posthog.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
+import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
+
+const throwUnrecoverable = (reason) => {
+  const error = new UnrecoverableError(`${reason.code}: ${reason.message}`);
+  error.code = reason.code;
+  throw error;
+};
 
 const resolveOwnerContextSafe = async ({ resumeId, jobUserId, payloadJobId }) => {
   if (typeof jobUserId === "string") {
@@ -154,6 +161,7 @@ const processResumeJob = async (job) => {
     } catch (error) {
       const attempts = job.opts.attempts ?? env.resumeQueueAttempts;
       const isFinalAttempt = job.attemptsMade + 1 >= attempts;
+      const reason = resolveFailureReason(error, "RESUME_TEXT_EXTRACTION_FAILED");
       Sentry.captureException(error, {
         tags: {
           queue: env.resumeQueueName,
@@ -181,12 +189,21 @@ const processResumeJob = async (job) => {
       jobLogger.error("Resume text extraction failed", {
         stage: "text_extraction",
         isFinalAttempt,
+        failureCode: reason.code,
+        retryable: reason.retryable,
         durationMs: Date.now() - extractionStartedAtMs,
         error: error.message,
       });
 
       if (isFinalAttempt) {
-        await resumeService.markExtractionFailed(resumeId);
+        await resumeService.markExtractionFailed(
+          resumeId,
+          buildFailureRecord({ stage: "text_extraction", reason }),
+        );
+      }
+
+      if (!reason.retryable) {
+        throwUnrecoverable(reason);
       } else {
       }
 
@@ -247,6 +264,12 @@ const processResumeJob = async (job) => {
     }
 
     if (structureResult?.status === "failed") {
+      const reason = {
+        code: structureResult.failureCode ?? "RESUME_STRUCTURING_FAILED",
+        retryable: Boolean(structureResult.retryable),
+        statusCode: null,
+        message: "Resume structuring failed",
+      };
       capturePosthogEvent({
         distinctId,
         event: "analysis_completed",
@@ -261,9 +284,17 @@ const processResumeJob = async (job) => {
       });
       jobLogger.warn("Stopping pipeline due to structuring failure", {
         stage: "structuring",
+        failureCode: reason.code,
+        retryable: reason.retryable,
         totalDurationMs: Date.now() - startedAtMs,
       });
-      return;
+      if (!reason.retryable) {
+        throwUnrecoverable(reason);
+      }
+      const failureError = new Error(reason.message);
+      failureError.code = reason.code;
+      failureError.retryable = reason.retryable;
+      throw failureError;
     }
 
     const refreshedResume = await resumeService.getResumeById(resumeId);
@@ -292,6 +323,21 @@ const processResumeJob = async (job) => {
           });
           throw error;
         }
+      }
+      if (scoringResult?.status === "failed") {
+        const reason = {
+          code: scoringResult.failureCode ?? "RESUME_SCORING_FAILED",
+          retryable: Boolean(scoringResult.retryable),
+          statusCode: null,
+          message: "Resume scoring failed",
+        };
+        if (!reason.retryable) {
+          throwUnrecoverable(reason);
+        }
+        const failureError = new Error(reason.message);
+        failureError.code = reason.code;
+        failureError.retryable = reason.retryable;
+        throw failureError;
       }
       capturePosthogEvent({
         distinctId,
@@ -334,6 +380,21 @@ const processResumeJob = async (job) => {
         });
         throw error;
       }
+    }
+    if (scoringResult?.status === "failed") {
+      const reason = {
+        code: scoringResult.failureCode ?? "RESUME_SCORING_FAILED",
+        retryable: Boolean(scoringResult.retryable),
+        statusCode: null,
+        message: "Resume scoring failed",
+      };
+      if (!reason.retryable) {
+        throwUnrecoverable(reason);
+      }
+      const failureError = new Error(reason.message);
+      failureError.code = reason.code;
+      failureError.retryable = reason.retryable;
+      throw failureError;
     }
     capturePosthogEvent({
       distinctId,
@@ -458,6 +519,7 @@ worker.on("failed", (job, error) => {
     jobId: job?.id,
     resumeId: job?.data?.resumeId,
     attemptsMade: job?.attemptsMade,
+    failureCode: error?.code ?? null,
     error: error.message,
   });
 });

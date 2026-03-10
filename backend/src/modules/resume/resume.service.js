@@ -47,24 +47,24 @@ const completeTextExtraction = async ({ id, rawText }) => {
   return resumeRepository.completeTextExtraction({ id, rawText });
 };
 
-const markExtractionFailed = async (id) => {
-  return resumeRepository.markExtractionFailed(id);
+const markExtractionFailed = async (id, failure = null) => {
+  return resumeRepository.markExtractionFailed(id, failure);
 };
 
 const completeStructureExtraction = async ({ id, structuredData }) => {
   return resumeRepository.completeStructureExtraction({ id, structuredData });
 };
 
-const markStructureFailed = async (id) => {
-  return resumeRepository.markStructureFailed(id);
+const markStructureFailed = async (id, failure = null) => {
+  return resumeRepository.markStructureFailed(id, failure);
 };
 
 const completeScoring = async ({ id, score, scoreBreakdown }) => {
   return resumeRepository.completeScoring({ id, score, scoreBreakdown });
 };
 
-const markScoringFailed = async (id) => {
-  return resumeRepository.markScoringFailed(id);
+const markScoringFailed = async (id, failure = null) => {
+  return resumeRepository.markScoringFailed(id, failure);
 };
 
 const startInsightsGeneration = async (id) => {
@@ -75,8 +75,8 @@ const completeInsightsGeneration = async ({ id, insights }) => {
   return resumeRepository.completeInsightsGeneration({ id, insights });
 };
 
-const markInsightsFailed = async (id) => {
-  return resumeRepository.markInsightsFailed(id);
+const markInsightsFailed = async (id, failure = null) => {
+  return resumeRepository.markInsightsFailed(id, failure);
 };
 
 const deleteResume = async (id) => {

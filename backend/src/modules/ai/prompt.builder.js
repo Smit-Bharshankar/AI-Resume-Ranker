@@ -6,6 +6,8 @@ const normalizeResumeText = (rawText) => {
   }
 
   return rawText
+    // Strip control characters that can cause provider 400 validation errors.
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, " ")
     .replace(/\r\n/g, "\n")
     .replace(/[ \t]+/g, " ")
     .replace(/\n{3,}/g, "\n\n")

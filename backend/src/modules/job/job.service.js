@@ -52,8 +52,18 @@ const completeRequirementsExtraction = async ({
   });
 };
 
-const markRequirementsExtractionFailed = async ({ id, currentStatus, userId }) => {
-  return jobRepository.markRequirementsExtractionFailed({ id, currentStatus, userId });
+const markRequirementsExtractionFailed = async ({
+  id,
+  currentStatus,
+  userId,
+  failure = null,
+}) => {
+  return jobRepository.markRequirementsExtractionFailed({
+    id,
+    currentStatus,
+    userId,
+    failure,
+  });
 };
 
 const jobService = {

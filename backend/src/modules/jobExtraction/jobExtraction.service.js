@@ -5,9 +5,11 @@ import getAiProvider from "../ai/providers/provider.factory.js";
 import { parseJsonFromCompletion } from "../ai/json.parser.js";
 import { buildJobExtractionPrompt } from "./jobPrompt.builder.js";
 import {
+  JOB_REQUIREMENTS_JSON_SCHEMA,
   JobSchemaValidationError,
   validateJobStructuredRequirements,
 } from "./jobSchema.validator.js";
+import { buildFailureRecord, resolveFailureReason } from "../ai/failureReason.js";
 
 const MAX_AI_RETRIES = 2;
 
@@ -46,6 +48,9 @@ const requestStructuredRequirements = async ({ jobId, rawDescription }) => {
     systemPrompt,
     userPrompt,
     temperature: 0.1,
+    responseSchema: JOB_REQUIREMENTS_JSON_SCHEMA,
+    schemaName: "job_requirements",
+    rateLimitBucket: "job_extraction",
   });
 
   logger.info("Job extraction AI response received", {
@@ -93,12 +98,19 @@ const process = async (jobId) => {
   }
 
   if (!job.rawDescription || typeof job.rawDescription !== "string") {
+    const reason = {
+      code: "MISSING_JOB_DESCRIPTION",
+      retryable: false,
+      statusCode: null,
+      message: "Job requirements extraction failed due to missing rawDescription",
+    };
     await jobService.markRequirementsExtractionFailed({
       id: jobId,
       currentStatus: "EXTRACTING_REQUIREMENTS",
+      failure: buildFailureRecord({ stage: "requirements_extraction", reason }),
     });
     scopedLogger.error("Job requirements extraction failed due to missing rawDescription");
-    return { status: "failed" };
+    return { status: "failed", failureCode: reason.code, retryable: false };
   }
 
   for (let attempt = 0; attempt <= MAX_AI_RETRIES; attempt += 1) {
@@ -155,14 +167,25 @@ const process = async (jobId) => {
       });
 
       if (!retriable || isFinalAttempt) {
+        const reason = error instanceof JobSchemaValidationError
+          ? {
+              code: "JOB_SCHEMA_VALIDATION_FAILED",
+              retryable: false,
+              statusCode: null,
+              message: error.message,
+            }
+          : resolveFailureReason(error, "JOB_REQUIREMENTS_EXTRACTION_FAILED");
         await jobService.markRequirementsExtractionFailed({
           id: jobId,
           currentStatus: "EXTRACTING_REQUIREMENTS",
+          failure: buildFailureRecord({ stage: "requirements_extraction", reason }),
         });
 
         scopedLogger.error("Job requirements extraction failed", {
           attempt: attemptNumber,
           maxRetries: MAX_AI_RETRIES,
+          failureCode: reason.code,
+          retryable: reason.retryable,
           errorStatus,
           errorCode: error?.code,
           isValidationError: error instanceof JobSchemaValidationError,
@@ -171,7 +194,7 @@ const process = async (jobId) => {
           error: error.message,
         });
 
-        return { status: "failed" };
+        return { status: "failed", failureCode: reason.code, retryable: false };
       }
 
       const delayMs = resolveRetryDelayMs(error, attempt);
@@ -179,11 +202,18 @@ const process = async (jobId) => {
     }
   }
 
+  const reason = {
+    code: "JOB_REQUIREMENTS_EXTRACTION_FAILED",
+    retryable: false,
+    statusCode: null,
+    message: "Job requirements extraction failed after retries",
+  };
   await jobService.markRequirementsExtractionFailed({
     id: jobId,
     currentStatus: "EXTRACTING_REQUIREMENTS",
+    failure: buildFailureRecord({ stage: "requirements_extraction", reason }),
   });
-  return { status: "failed" };
+  return { status: "failed", failureCode: reason.code, retryable: false };
 };
 
 const jobExtractionService = {

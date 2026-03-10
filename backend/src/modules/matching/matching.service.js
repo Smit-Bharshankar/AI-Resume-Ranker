@@ -3,6 +3,7 @@ import jobService from "../job/job.service.js";
 import scoringEngine from "./scoring.engine.js";
 import scoreExplainer from "./score.explainer.js";
 import logger from "../../utils/logger.js";
+import { buildFailureRecord, resolveFailureReason } from "../ai/failureReason.js";
 
 const hasStructuredRequirements = (value) => {
   return (
@@ -104,14 +105,20 @@ const process = async (resumeId) => {
 
     return { status: "scored" };
   } catch (error) {
-    await resumeService.markScoringFailed(resumeId);
+    const reason = resolveFailureReason(error, "RESUME_SCORING_FAILED");
+    await resumeService.markScoringFailed(
+      resumeId,
+      buildFailureRecord({ stage: "scoring", reason }),
+    );
 
     scopedLogger.error("Resume scoring failed", {
+      failureCode: reason.code,
+      retryable: reason.retryable,
       error: error.message,
       durationMs: Date.now() - startedAtMs,
     });
 
-    return { status: "failed" };
+    return { status: "failed", failureCode: reason.code, retryable: reason.retryable };
   }
 };
 

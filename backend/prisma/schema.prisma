@@ -49,6 +49,7 @@ model Job {
   title                  String
   rawDescription         String    @db.Text
   structuredRequirements Json?
+  lastProcessingFailure  Json?
   status                 JobStatus @default(DRAFT)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
@@ -75,6 +76,7 @@ model Resume {
   rawText        String?      @db.Text
   structuredData Json?
   insights       Json?
+  lastProcessingFailure Json?
   status         ResumeStatus
   stage          CandidateStage @default(NEW)
   score          Float?

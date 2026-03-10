@@ -1,4 +1,4 @@
-import { Worker } from "bullmq";
+import { UnrecoverableError, Worker } from "bullmq";
 import env from "../config/env.js";
 import logger from "../utils/logger.js";
 import { connection } from "./resumeQueue.js";
@@ -8,6 +8,13 @@ import { capturePosthogEvent } from "../analytics/posthog.js";
 import resumeService from "../modules/resume/resume.service.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
+import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
+
+const throwUnrecoverable = (reason) => {
+  const error = new UnrecoverableError(`${reason.code}: ${reason.message}`);
+  error.code = reason.code;
+  throw error;
+};
 
 const resolveOwnerContextSafe = async ({ resumeId, jobUserId, payloadJobId }) => {
   if (typeof jobUserId === "string") {
@@ -71,6 +78,21 @@ const processInsightJob = async (job) => {
 
   try {
     const result = await insightService.process(resumeId);
+    if (result?.status === "failed") {
+      const reason = {
+        code: result.failureCode ?? "RESUME_INSIGHTS_FAILED",
+        retryable: Boolean(result.retryable),
+        statusCode: null,
+        message: "Resume insight generation failed",
+      };
+      if (!reason.retryable) {
+        throwUnrecoverable(reason);
+      }
+      const failureError = new Error(reason.message);
+      failureError.code = reason.code;
+      failureError.retryable = reason.retryable;
+      throw failureError;
+    }
     capturePosthogEvent({
       distinctId,
       event: "analysis_completed",
@@ -93,8 +115,12 @@ const processInsightJob = async (job) => {
     return result;
   } catch (error) {
     const isFinalAttempt = attempt >= maxAttempts;
+    const reason = resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
     if (isFinalAttempt) {
-      void resumeService.markInsightsFailed(resumeId);
+      await resumeService.markInsightsFailed(
+        resumeId,
+        buildFailureRecord({ stage: "insight_worker", reason }),
+      );
     }
     Sentry.captureException(error, {
       tags: {
@@ -130,9 +156,15 @@ const processInsightJob = async (job) => {
       },
     });
     baseLogger.error("Resume insight generation failed", {
+      failureCode: reason.code,
+      retryable: reason.retryable,
       error: error.message,
       durationMs: Date.now() - startedAtMs,
     });
+
+    if (!reason.retryable) {
+      throwUnrecoverable(reason);
+    }
 
     throw error;
   }
@@ -164,13 +196,17 @@ worker.on("error", (error) => {
   });
 });
 
-worker.on("failed", (job, error) => {
+worker.on("failed", async (job, error) => {
   const attempts = job?.opts?.attempts ?? env.resumeInsightQueueAttempts;
   const attempt = (job?.attemptsMade ?? 0) + 1;
   const isFinalAttempt = attempt >= attempts;
   const retries = Math.max(0, attempt - 1);
+  const reason = resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
   if (isFinalAttempt && job?.data?.resumeId) {
-    void resumeService.markInsightsFailed(job.data.resumeId);
+    await resumeService.markInsightsFailed(
+      job.data.resumeId,
+      buildFailureRecord({ stage: "insight_worker", reason }),
+    );
   }
   Sentry.captureException(error, {
     tags: {
@@ -199,6 +235,7 @@ worker.on("failed", (job, error) => {
     queueJobId: job?.id,
     resumeId: job?.data?.resumeId,
     attemptsMade: job?.attemptsMade,
+    failureCode: error?.code ?? null,
     error: error.message,
   });
 });

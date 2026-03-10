@@ -91,7 +91,7 @@ const env = {
   ),
   jobExtractionWorkerConcurrency: toNumber(
     process.env.JOB_EXTRACTION_WORKER_CONCURRENCY,
-    4,
+    2,
   ),
   jobExtractionProcessTimeoutMs: toNumber(
     process.env.JOB_EXTRACTION_PROCESS_TIMEOUT_MS,
@@ -129,6 +129,9 @@ const env = {
       (aiProvider === "openai" ? process.env.OPENAI_RPM : process.env.GEMINI_RPM),
     0,
   ),
+  aiStructuringRpm: toNumber(process.env.AI_STRUCTURING_RPM, 10),
+  aiInsightsRpm: toNumber(process.env.AI_INSIGHTS_RPM, 4),
+  aiJobExtractionRpm: toNumber(process.env.AI_JOB_EXTRACTION_RPM, 1),
   aiRpd: toNumber(
     process.env.AI_RPD ??
       (aiProvider === "openai" ? process.env.OPENAI_RPD : process.env.GEMINI_RPD),

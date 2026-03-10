@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import AIProvider from "./base.provider.js";
+import { waitForAiBudget } from "../rateBudget.js";
 
 class OpenAIProvider extends AIProvider {
   constructor(options) {
@@ -22,12 +23,32 @@ class OpenAIProvider extends AIProvider {
     return this.client;
   }
 
-  async generateJson({ systemPrompt, userPrompt, temperature }) {
+  async generateJson({
+    systemPrompt,
+    userPrompt,
+    temperature,
+    responseSchema,
+    schemaName = "response",
+    rateLimitBucket,
+  }) {
+    await waitForAiBudget(rateLimitBucket ?? "default");
+
+    const responseFormat = responseSchema
+      ? {
+          type: "json_schema",
+          json_schema: {
+            name: schemaName,
+            strict: true,
+            schema: responseSchema,
+          },
+        }
+      : { type: "json_object" };
+
     const completion = await this.getClient().chat.completions.create({
       model: this.model,
       temperature,
       max_tokens: this.maxOutputTokens,
-      response_format: { type: "json_object" },
+      response_format: responseFormat,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
