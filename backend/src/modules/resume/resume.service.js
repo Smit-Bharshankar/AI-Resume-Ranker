@@ -35,6 +35,10 @@ const updateStructuredData = async (id, structuredData) => {
   return resumeRepository.updateStructuredData(id, structuredData);
 };
 
+const updateLastProcessingFailure = async (id, failure = null) => {
+  return resumeRepository.updateLastProcessingFailure(id, failure);
+};
+
 const getResumeById = async (id, userId) => {
   return resumeRepository.getResumeById(id, userId);
 };
@@ -113,6 +117,7 @@ const resumeService = {
   updateStatus,
   updateRawText,
   updateStructuredData,
+  updateLastProcessingFailure,
   getResumeById,
   getResumeOwnerContext,
   completeTextExtraction,

@@ -15,6 +15,12 @@ import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
 import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
 
+const signal = (icon, label, meta = {}) => {
+  const ts = new Date().toISOString();
+  const suffix = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+  console.log(`${ts} ${icon} ${label}${suffix}`);
+};
+
 const throwUnrecoverable = (reason) => {
   const error = new UnrecoverableError(`${reason.code}: ${reason.message}`);
   error.code = reason.code;
@@ -63,6 +69,16 @@ const enqueueInsightsPipeline = async ({ resumeId, userId, jobId, jobLogger }) =
 const processResumeJob = async (job) => {
   const startedAtMs = Date.now();
   const { resumeId, userId: jobUserId, jobId: payloadJobId } = job.data ?? {};
+  const jobResult = {
+    resumeId,
+    stages: {
+      textExtraction: "skipped",
+      structuring: "skipped",
+      scoring: "skipped",
+      insightEnqueue: "skipped",
+    },
+    structuredResume: null,
+  };
 
   if (!resumeId || typeof resumeId !== "string") {
     throw new Error("Invalid resumeId in queue payload");
@@ -78,6 +94,7 @@ const processResumeJob = async (job) => {
   const attempt = job.attemptsMade + 1;
   const maxAttempts = job.opts.attempts ?? env.resumeQueueAttempts;
   const retries = Math.max(0, attempt - 1);
+  signal("📥", "resume:start", { resumeId, attempt, maxAttempts });
 
   baseJobLogger.info("Resume pipeline job started");
 
@@ -103,7 +120,11 @@ const processResumeJob = async (job) => {
 
   if (!resume) {
     baseJobLogger.warn("Skipping missing resume");
-    return;
+    return {
+      ...jobResult,
+      status: "skipped",
+      reason: "missing_resume",
+    };
   }
 
   const jobLogger = baseJobLogger.child({
@@ -140,12 +161,21 @@ const processResumeJob = async (job) => {
           stage: "text_extraction",
           durationMs: Date.now() - extractionStartedAtMs,
         });
-        return;
+        return {
+          ...jobResult,
+          status: "skipped",
+          reason: "concurrent_status_update_text_extraction",
+        };
       }
 
       jobLogger.info("Resume text extraction completed", {
         stage: "text_extraction",
         durationMs: Date.now() - extractionStartedAtMs,
+      });
+      jobResult.stages.textExtraction = "completed";
+      signal("📄", "resume:text-ok", {
+        resumeId,
+        ms: Date.now() - extractionStartedAtMs,
       });
 
       capturePosthogEvent({
@@ -201,6 +231,12 @@ const processResumeJob = async (job) => {
           buildFailureRecord({ stage: "text_extraction", reason }),
         );
       }
+      signal("❌", "resume:text-fail", {
+        resumeId,
+        code: reason.code,
+        retryable: reason.retryable,
+        isFinalAttempt,
+      });
 
       if (!reason.retryable) {
         throwUnrecoverable(reason);
@@ -216,6 +252,15 @@ const processResumeJob = async (job) => {
   if (resume?.status === "TEXT_EXTRACTED") {
     const structuringStartedAtMs = Date.now();
     const structureResult = await resumeExtractionService.process(resumeId);
+    jobResult.stages.structuring = structureResult?.status ?? "unknown";
+    if (structureResult?.status === "structured") {
+      jobResult.structuredResume = structureResult?.structuredData ?? null;
+    }
+    signal("🧠", "resume:struct-result", {
+      resumeId,
+      status: structureResult?.status ?? "unknown",
+      code: structureResult?.failureCode ?? null,
+    });
     jobLogger.info("Resume structuring stage finished", {
       stage: "structuring",
       structureStatus: structureResult?.status ?? "unknown",
@@ -225,6 +270,12 @@ const processResumeJob = async (job) => {
     if (structureResult?.status === "structured") {
       const scoringStartedAtMs = Date.now();
       const scoringResult = await resumeMatchingService.process(resumeId);
+      jobResult.stages.scoring = scoringResult?.status ?? "unknown";
+      signal("🧮", "resume:score-result", {
+        resumeId,
+        status: scoringResult?.status ?? "unknown",
+        code: scoringResult?.failureCode ?? null,
+      });
       jobLogger.info("Resume scoring stage finished", {
         stage: "scoring",
         scoringStatus: scoringResult?.status ?? "unknown",
@@ -240,6 +291,7 @@ const processResumeJob = async (job) => {
             jobId: relatedJobId,
             jobLogger,
           });
+          signal("📤", "resume:insight-enqueued", { resumeId });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
             stage: "insights_enqueue",
@@ -260,7 +312,10 @@ const processResumeJob = async (job) => {
           duration_ms: Date.now() - startedAtMs,
         },
       });
-      return;
+      return {
+        ...jobResult,
+        status: "completed",
+      };
     }
 
     if (structureResult?.status === "failed") {
@@ -301,6 +356,14 @@ const processResumeJob = async (job) => {
     if (refreshedResume?.status === "STRUCTURED") {
       const scoringStartedAtMs = Date.now();
       const scoringResult = await resumeMatchingService.process(resumeId);
+      jobResult.stages.scoring = scoringResult?.status ?? "unknown";
+      jobResult.structuredResume =
+        refreshedResume?.structuredData ?? jobResult.structuredResume;
+      signal("🧮", "resume:score-result", {
+        resumeId,
+        status: scoringResult?.status ?? "unknown",
+        code: scoringResult?.failureCode ?? null,
+      });
       jobLogger.info("Resume scoring stage finished after status refresh", {
         stage: "scoring",
         scoringStatus: scoringResult?.status ?? "unknown",
@@ -316,6 +379,7 @@ const processResumeJob = async (job) => {
             jobId: relatedJobId,
             jobLogger,
           });
+          signal("📤", "resume:insight-enqueued", { resumeId });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
             stage: "insights_enqueue",
@@ -352,12 +416,23 @@ const processResumeJob = async (job) => {
         },
       });
     }
-    return;
+    return {
+      ...jobResult,
+      status: "completed",
+    };
   }
 
   if (resume?.status === "STRUCTURED") {
+    jobResult.stages.structuring = "already_structured";
+    jobResult.structuredResume = resume?.structuredData ?? null;
     const scoringStartedAtMs = Date.now();
     const scoringResult = await resumeMatchingService.process(resumeId);
+    jobResult.stages.scoring = scoringResult?.status ?? "unknown";
+    signal("🧮", "resume:score-result", {
+      resumeId,
+      status: scoringResult?.status ?? "unknown",
+      code: scoringResult?.failureCode ?? null,
+    });
     jobLogger.info("Resume scoring stage finished from structured state", {
       stage: "scoring",
       scoringStatus: scoringResult?.status ?? "unknown",
@@ -373,6 +448,7 @@ const processResumeJob = async (job) => {
           jobId: relatedJobId,
           jobLogger,
         });
+        signal("📤", "resume:insight-enqueued", { resumeId });
       } catch (error) {
         jobLogger.error("Failed to enqueue resume insights", {
           stage: "insights_enqueue",
@@ -408,10 +484,16 @@ const processResumeJob = async (job) => {
         duration_ms: Date.now() - startedAtMs,
       },
     });
-    return;
+    return {
+      ...jobResult,
+      status: "completed",
+    };
   }
 
   if (resume?.status === "SCORED") {
+    jobResult.stages.structuring = "already_structured";
+    jobResult.stages.scoring = "already_scored";
+    jobResult.structuredResume = resume?.structuredData ?? null;
     try {
       await enqueueInsightsPipeline({
         resumeId,
@@ -419,6 +501,7 @@ const processResumeJob = async (job) => {
         jobId: relatedJobId,
         jobLogger,
       });
+      signal("📤", "resume:insight-enqueued", { resumeId });
     } catch (error) {
       jobLogger.error("Failed to enqueue resume insights from scored state", {
         stage: "insights_enqueue",
@@ -438,13 +521,22 @@ const processResumeJob = async (job) => {
         duration_ms: Date.now() - startedAtMs,
       },
     });
-    return;
+    return {
+      ...jobResult,
+      status: "completed",
+    };
   }
 
   jobLogger.info("Skipping resume with unsupported status in worker", {
     status: resume?.status,
     totalDurationMs: Date.now() - startedAtMs,
   });
+  return {
+    ...jobResult,
+    status: "skipped",
+    reason: "unsupported_status",
+    resumeStatus: resume?.status ?? null,
+  };
 };
 
 const processResumeJobWithTimeout = async (job) => {
@@ -458,6 +550,10 @@ const processResumeJobWithTimeout = async (job) => {
 const worker = new Worker(env.resumeQueueName, processResumeJobWithTimeout, {
   connection,
   concurrency: env.resumeWorkerConcurrency,
+  limiter: {
+    max: env.resumeWorkerLimiterMax,
+    duration: env.resumeWorkerLimiterDurationMs,
+  },
 });
 
 const aiConfigHealth = validateAiConfiguration();
@@ -527,6 +623,8 @@ worker.on("failed", (job, error) => {
 logger.info("Resume worker started", {
   queue: env.resumeQueueName,
   concurrency: env.resumeWorkerConcurrency,
+  limiterMax: env.resumeWorkerLimiterMax,
+  limiterDurationMs: env.resumeWorkerLimiterDurationMs,
   processTimeoutMs: env.resumeProcessTimeoutMs,
 });
 
@@ -557,3 +655,4 @@ process.on("uncaughtException", (error) => {
   void shutdownPosthog();
   process.exit(1);
 });
+

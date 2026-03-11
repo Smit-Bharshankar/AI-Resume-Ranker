@@ -25,6 +25,14 @@ const truncateErrorText = (value, maxLength = 600) => {
 
 const sleep = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getTopLevelKeys = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.keys(value);
+};
+
 const isRetriableProviderError = (error) => {
   const status = error?.status ?? error?.response?.status;
   const code = String(error?.code ?? "").toLowerCase();
@@ -70,10 +78,18 @@ const resolveRateLimitDelayMs = (error) => {
   return null;
 };
 
-const requestStructuredResume = async ({ resumeId, rawText }) => {
+const requestStructuredResume = async ({ resumeId, jobId, rawText }) => {
   const provider = getAiProvider();
   const { systemPrompt, userPrompt, wasTruncated, wasDeduped } =
     buildExtractionPrompt(rawText);
+
+  logger.info("Worker AI call started", {
+    stage: "resume_structuring",
+    resumeId,
+    jobId: jobId ?? null,
+    provider: env.aiProvider,
+    model: provider.model,
+  });
 
   const result = await provider.generateJson({
     systemPrompt,
@@ -98,7 +114,15 @@ const requestStructuredResume = async ({ resumeId, rawText }) => {
     configuredTpm: env.aiTpm,
   });
 
-  return parseJsonFromCompletion(result.text);
+  const parsed = parseJsonFromCompletion(result.text);
+  logger.info("Worker AI call response keys", {
+    stage: "resume_structuring",
+    resumeId,
+    jobId: jobId ?? null,
+    keys: getTopLevelKeys(parsed),
+  });
+
+  return parsed;
 };
 
 const process = async (resumeId) => {
@@ -154,6 +178,7 @@ const process = async (resumeId) => {
     try {
       const llmPayload = await requestStructuredResume({
         resumeId,
+        jobId: resume.jobId,
         rawText: resume.rawText,
       });
       const structuredData = validateStructuredResume(llmPayload);
@@ -175,7 +200,7 @@ const process = async (resumeId) => {
         attempt: attemptNumber,
         durationMs: Date.now() - startedAtMs,
       });
-      return { status: "structured" };
+      return { status: "structured", structuredData };
     } catch (error) {
       const isValidationError = error instanceof ValidationError;
       const isInvalidJsonError = error?.code === "INVALID_JSON_RESPONSE";

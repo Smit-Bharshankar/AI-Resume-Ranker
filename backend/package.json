@@ -13,6 +13,7 @@
     "worker:job-extraction": "node src/queue/jobExtractionWorker.js",
     "worker:job-extraction:dev": "nodemon src/queue/jobExtractionWorker.js",
     "ai:smoke": "node src/scripts/aiExtractionSmoke.js",
+    "ai:limit-probe": "node src/scripts/aiRateLimitProbe.js",
     "ai:smoke:key": "node src/scripts/aiExtractionSmoke.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

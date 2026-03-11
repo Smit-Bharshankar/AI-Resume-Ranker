@@ -5,6 +5,17 @@ const NETWORK_ERROR_CODES = new Set([
   "econnrefused",
   "etimedout",
 ]);
+const KNOWN_FAILURE_CODES = new Set([
+  "AI_INVALID_JSON_RESPONSE",
+  "AI_PROVIDER_TIMEOUT",
+  "PROCESS_TIMEOUT",
+  "AI_CONFIG_MISSING",
+  "AI_RATE_LIMITED",
+  "AI_PROVIDER_5XX",
+  "AI_PROVIDER_4XX",
+  "AI_NETWORK_ERROR",
+  "AI_TRANSIENT_ERROR",
+]);
 
 const getErrorStatus = (error) => {
   const status = error?.status ?? error?.response?.status;
@@ -25,6 +36,35 @@ const resolveFailureReason = (error, fallbackCode = "PROCESSING_FAILED") => {
   const normalizedCode = String(error.code ?? "").trim();
   const loweredCode = normalizedCode.toLowerCase();
   const message = error.message ?? "Processing failed";
+  const messageCodeMatch =
+    typeof message === "string" ? message.match(/^([A-Z0-9_]+):/) : null;
+  const prefixedMessageCode = messageCodeMatch?.[1] ?? null;
+
+  if (KNOWN_FAILURE_CODES.has(normalizedCode)) {
+    return {
+      code: normalizedCode,
+      retryable:
+        typeof error.retryable === "boolean"
+          ? error.retryable
+          : normalizedCode !== "AI_CONFIG_MISSING" &&
+            normalizedCode !== "AI_PROVIDER_4XX",
+      statusCode,
+      message,
+    };
+  }
+
+  if (prefixedMessageCode && KNOWN_FAILURE_CODES.has(prefixedMessageCode)) {
+    return {
+      code: prefixedMessageCode,
+      retryable:
+        typeof error.retryable === "boolean"
+          ? error.retryable
+          : prefixedMessageCode !== "AI_CONFIG_MISSING" &&
+            prefixedMessageCode !== "AI_PROVIDER_4XX",
+      statusCode,
+      message,
+    };
+  }
 
   if (normalizedCode === "INVALID_JSON_RESPONSE") {
     return { code: "AI_INVALID_JSON_RESPONSE", retryable: true, statusCode, message };

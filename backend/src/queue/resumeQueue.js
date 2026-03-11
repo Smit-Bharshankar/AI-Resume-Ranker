@@ -83,7 +83,12 @@ const getReusableExistingJob = async (jobId) => {
   return existingJob;
 };
 
-const enqueueResumeExtraction = async ({ resumeId, userId, jobId }) => {
+const enqueueResumeExtraction = async ({
+  resumeId,
+  userId,
+  jobId,
+  delayMs = 0,
+}) => {
   const existing = await getReusableExistingJob(resumeId);
   if (existing) {
     return existing;
@@ -94,6 +99,7 @@ const enqueueResumeExtraction = async ({ resumeId, userId, jobId }) => {
     { resumeId, userId, jobId },
     {
       jobId: resumeId,
+      delay: Math.max(0, Number(delayMs) || 0),
     },
   );
 };

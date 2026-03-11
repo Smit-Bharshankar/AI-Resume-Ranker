@@ -1,21 +1,48 @@
 import prisma from "../../config/prisma.js";
 
 const toFailureRecord = (failure, { stage, code, message }) => {
-  if (
-    failure &&
-    typeof failure === "object" &&
-    !Array.isArray(failure)
-  ) {
+  const at = new Date().toISOString();
+
+  if (typeof failure === "string" && failure.trim()) {
+    return {
+      code,
+      retryable: false,
+      statusCode: null,
+      stage,
+      message: failure.trim(),
+      rawFailure: failure,
+      at,
+    };
+  }
+
+  if (failure instanceof Error) {
     return {
       code: typeof failure.code === "string" ? failure.code : code,
       retryable: Boolean(failure.retryable),
       statusCode: Number.isFinite(failure.statusCode) ? failure.statusCode : null,
+      stage,
+      message: failure.message || message,
+      rawFailure: {
+        name: failure.name,
+        message: failure.message,
+        code: failure.code ?? null,
+      },
+      at,
+    };
+  }
+
+  if (failure && typeof failure === "object" && !Array.isArray(failure)) {
+    const parsedStatusCode = Number(failure.statusCode);
+
+    return {
+      code: typeof failure.code === "string" ? failure.code : code,
+      retryable: Boolean(failure.retryable),
+      statusCode: Number.isFinite(parsedStatusCode) ? parsedStatusCode : null,
       stage: typeof failure.stage === "string" ? failure.stage : stage,
       message: typeof failure.message === "string" ? failure.message : message,
-      at:
-        typeof failure.at === "string" && failure.at
-          ? failure.at
-          : new Date().toISOString(),
+      rawFailure:
+        typeof failure.rawFailure === "undefined" ? null : failure.rawFailure,
+      at: typeof failure.at === "string" && failure.at ? failure.at : at,
     };
   }
 
@@ -25,7 +52,8 @@ const toFailureRecord = (failure, { stage, code, message }) => {
     statusCode: null,
     stage,
     message,
-    at: new Date().toISOString(),
+    rawFailure: failure ?? null,
+    at,
   };
 };
 
@@ -93,6 +121,21 @@ const updateResumeStage = async (id, stage) => {
     where: { id },
     data: { stage },
   });
+};
+
+const updateLastProcessingFailure = async (id, failure = null) => {
+  const failureRecord = toFailureRecord(failure, {
+    stage: "processing",
+    code: "PROCESSING_FAILED",
+    message: "Resume processing failed",
+  });
+
+  const result = await prisma.resume.updateMany({
+    where: { id },
+    data: { lastProcessingFailure: failureRecord },
+  });
+
+  return result.count > 0;
 };
 
 const getResumeById = async (id, userId) => {
@@ -310,6 +353,7 @@ const resumeRepository = {
   updateRawText,
   updateStructuredData,
   updateResumeStage,
+  updateLastProcessingFailure,
   getResumeById,
   getResumeOwnerContext,
   completeTextExtraction,

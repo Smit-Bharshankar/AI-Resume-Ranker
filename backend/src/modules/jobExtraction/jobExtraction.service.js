@@ -15,6 +15,14 @@ const MAX_AI_RETRIES = 2;
 
 const sleep = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getTopLevelKeys = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.keys(value);
+};
+
 const getErrorStatus = (error) => {
   const status = error?.status ?? error?.response?.status;
   return Number.isFinite(status) ? status : null;
@@ -44,6 +52,13 @@ const requestStructuredRequirements = async ({ jobId, rawDescription }) => {
   const { systemPrompt, userPrompt, wasTruncated } =
     buildJobExtractionPrompt(rawDescription);
 
+  logger.info("Worker AI call started", {
+    stage: "job_requirements_structuring",
+    jobId,
+    provider: env.aiProvider,
+    model: provider.model,
+  });
+
   const result = await provider.generateJson({
     systemPrompt,
     userPrompt,
@@ -67,6 +82,11 @@ const requestStructuredRequirements = async ({ jobId, rawDescription }) => {
   });
 
   const parsed = parseJsonFromCompletion(result.text);
+  logger.info("Worker AI call response keys", {
+    stage: "job_requirements_structuring",
+    jobId,
+    keys: getTopLevelKeys(parsed),
+  });
   return validateJobStructuredRequirements(parsed);
 };
 

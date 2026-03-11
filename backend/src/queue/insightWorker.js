@@ -10,6 +10,12 @@ import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
 import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
 
+const signal = (icon, label, meta = {}) => {
+  const ts = new Date().toISOString();
+  const suffix = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+  console.log(`${ts} ${icon} ${label}${suffix}`);
+};
+
 const throwUnrecoverable = (reason) => {
   const error = new UnrecoverableError(`${reason.code}: ${reason.message}`);
   error.code = reason.code;
@@ -38,6 +44,19 @@ const resolveOwnerContextSafe = async ({ resumeId, jobUserId, payloadJobId }) =>
   }
 };
 
+const persistInsightFailure = async ({ resumeId, failure, baseLogger }) => {
+  const markedFailed = await resumeService.markInsightsFailed(resumeId, failure);
+  if (markedFailed) {
+    return;
+  }
+
+  await resumeService.updateLastProcessingFailure(resumeId, failure);
+  baseLogger.warn("Insight failure persisted without FAILED_INSIGHTS transition", {
+    resumeId,
+  });
+  signal("🧷", "insight:failure-persisted-fallback", { resumeId });
+};
+
 const processInsightJob = async (job) => {
   const startedAtMs = Date.now();
   const { resumeId, userId: jobUserId, jobId: payloadJobId } = job.data ?? {};
@@ -62,6 +81,7 @@ const processInsightJob = async (job) => {
   const attempt = job.attemptsMade + 1;
   const maxAttempts = job.opts.attempts ?? env.resumeInsightQueueAttempts;
   const retries = Math.max(0, attempt - 1);
+  signal("📥", "insight:start", { resumeId, attempt, maxAttempts });
 
   baseLogger.info("Resume insight generation started");
   capturePosthogEvent({
@@ -77,7 +97,14 @@ const processInsightJob = async (job) => {
   });
 
   try {
+    const serviceStartedAt = Date.now();
     const result = await insightService.process(resumeId);
+    signal("🧠", "insight:service-result", {
+      resumeId,
+      status: result?.status ?? "unknown",
+      code: result?.failureCode ?? null,
+      ms: Date.now() - serviceStartedAt,
+    });
     if (result?.status === "failed") {
       const reason = {
         code: result.failureCode ?? "RESUME_INSIGHTS_FAILED",
@@ -91,6 +118,11 @@ const processInsightJob = async (job) => {
       const failureError = new Error(reason.message);
       failureError.code = reason.code;
       failureError.retryable = reason.retryable;
+      signal("⚠️", "insight:service-failed", {
+        resumeId,
+        code: reason.code,
+        retryable: reason.retryable,
+      });
       throw failureError;
     }
     capturePosthogEvent({
@@ -117,11 +149,18 @@ const processInsightJob = async (job) => {
     const isFinalAttempt = attempt >= maxAttempts;
     const reason = resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
     if (isFinalAttempt) {
-      await resumeService.markInsightsFailed(
+      await persistInsightFailure({
         resumeId,
-        buildFailureRecord({ stage: "insight_worker", reason }),
-      );
+        failure: buildFailureRecord({ stage: "insight_worker", reason }),
+        baseLogger,
+      });
     }
+    signal("❌", "insight:error", {
+      resumeId,
+      code: reason.code,
+      retryable: reason.retryable,
+      isFinalAttempt,
+    });
     Sentry.captureException(error, {
       tags: {
         queue: env.resumeInsightQueueName,
@@ -181,6 +220,10 @@ const processInsightJobWithTimeout = async (job) => {
 const worker = new Worker(env.resumeInsightQueueName, processInsightJobWithTimeout, {
   connection,
   concurrency: env.resumeInsightWorkerConcurrency,
+  limiter: {
+    max: env.resumeInsightWorkerLimiterMax,
+    duration: env.resumeInsightWorkerLimiterDurationMs,
+  },
 });
 
 worker.on("error", (error) => {
@@ -203,11 +246,20 @@ worker.on("failed", async (job, error) => {
   const retries = Math.max(0, attempt - 1);
   const reason = resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
   if (isFinalAttempt && job?.data?.resumeId) {
-    await resumeService.markInsightsFailed(
-      job.data.resumeId,
-      buildFailureRecord({ stage: "insight_worker", reason }),
-    );
+    await persistInsightFailure({
+      resumeId: job.data.resumeId,
+      failure: buildFailureRecord({ stage: "insight_worker", reason }),
+      baseLogger: logger.child({
+        queue: env.resumeInsightQueueName,
+        queueJobId: job?.id,
+      }),
+    });
   }
+  signal("💥", "insight:job-failed-event", {
+    resumeId: job?.data?.resumeId ?? null,
+    code: reason.code,
+    isFinalAttempt,
+  });
   Sentry.captureException(error, {
     tags: {
       queue: env.resumeInsightQueueName,
@@ -243,6 +295,8 @@ worker.on("failed", async (job, error) => {
 logger.info("Insight worker started", {
   queue: env.resumeInsightQueueName,
   concurrency: env.resumeInsightWorkerConcurrency,
+  limiterMax: env.resumeInsightWorkerLimiterMax,
+  limiterDurationMs: env.resumeInsightWorkerLimiterDurationMs,
   processTimeoutMs: env.resumeInsightProcessTimeoutMs,
 });
 

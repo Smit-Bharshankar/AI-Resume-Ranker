@@ -56,7 +56,13 @@ const env = {
   resumeQueueName: process.env.RESUME_QUEUE_NAME ?? "resume-processing",
   resumeQueueAttempts: toNumber(process.env.RESUME_QUEUE_ATTEMPTS, 3),
   resumeQueueBackoffMs: toNumber(process.env.RESUME_QUEUE_BACKOFF_MS, 2000),
+  resumeQueueStaggerMs: toNumber(process.env.RESUME_QUEUE_STAGGER_MS, 500),
   resumeWorkerConcurrency: toNumber(process.env.RESUME_WORKER_CONCURRENCY, 3),
+  resumeWorkerLimiterMax: toNumber(process.env.RESUME_WORKER_LIMITER_MAX, 1),
+  resumeWorkerLimiterDurationMs: toNumber(
+    process.env.RESUME_WORKER_LIMITER_DURATION_MS,
+    7500,
+  ),
   resumeProcessTimeoutMs: toNumber(
     process.env.RESUME_PROCESS_TIMEOUT_MS,
     10 * 60 * 1000,
@@ -74,6 +80,14 @@ const env = {
   resumeInsightWorkerConcurrency: toNumber(
     process.env.RESUME_INSIGHT_WORKER_CONCURRENCY,
     4,
+  ),
+  resumeInsightWorkerLimiterMax: toNumber(
+    process.env.RESUME_INSIGHT_WORKER_LIMITER_MAX,
+    1,
+  ),
+  resumeInsightWorkerLimiterDurationMs: toNumber(
+    process.env.RESUME_INSIGHT_WORKER_LIMITER_DURATION_MS,
+    10000,
   ),
   resumeInsightProcessTimeoutMs: toNumber(
     process.env.RESUME_INSIGHT_PROCESS_TIMEOUT_MS,

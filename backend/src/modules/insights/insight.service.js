@@ -16,6 +16,14 @@ const MAX_AI_RETRIES = 2;
 
 const sleep = async (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+const getTopLevelKeys = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.keys(value);
+};
+
 const isPlainObject = (value) => {
   return (
     typeof value === "object" &&
@@ -76,6 +84,7 @@ const resolveRetryDelayMs = (error, attempt) => {
 
 const requestInsights = async ({
   resumeId,
+  jobId,
   structuredResume,
   structuredRequirements,
   scoreBreakdown,
@@ -85,6 +94,14 @@ const requestInsights = async ({
     structuredResume,
     structuredRequirements,
     scoreBreakdown,
+  });
+
+  logger.info("Worker AI call started", {
+    stage: "resume_insights",
+    resumeId,
+    jobId: jobId ?? null,
+    provider: env.aiProvider,
+    model: provider.model,
   });
 
   const result = await provider.generateJson({
@@ -110,6 +127,12 @@ const requestInsights = async ({
   });
 
   const parsed = parseJsonFromCompletion(result.text);
+  logger.info("Worker AI call response keys", {
+    stage: "resume_insights",
+    resumeId,
+    jobId: jobId ?? null,
+    keys: getTopLevelKeys(parsed),
+  });
   return validateInsightPayload(parsed);
 };
 
@@ -211,6 +234,7 @@ const process = async (resumeId) => {
     try {
       const insights = await requestInsights({
         resumeId,
+        jobId: resume.jobId,
         structuredResume: resume.structuredData,
         structuredRequirements: job.structuredRequirements,
         scoreBreakdown: resume.scoreBreakdown,

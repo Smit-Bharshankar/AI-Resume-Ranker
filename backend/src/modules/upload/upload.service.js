@@ -3,8 +3,9 @@ import resumeService from "../resume/resume.service.js";
 import supabaseStorage from "../../storage/supabaseStorage.js";
 import { enqueueResumeExtraction } from "../../queue/resumeQueue.js";
 import logger from "../../utils/logger.js";
+import env from "../../config/env.js";
 
-const processSingleFile = async ({ userId, jobId, file }) => {
+const processSingleFile = async ({ userId, jobId, file, index }) => {
   let createdResume = null;
   let storagePath = "";
 
@@ -25,6 +26,7 @@ const processSingleFile = async ({ userId, jobId, file }) => {
       resumeId: createdResume.id,
       userId,
       jobId,
+      delayMs: index * env.resumeQueueStaggerMs,
     });
 
     return true;
@@ -74,7 +76,7 @@ const uploadResumesForJob = async ({ userId, jobId, files }) => {
   }
 
   const results = await Promise.all(
-    files.map((file) => processSingleFile({ userId, jobId, file })),
+    files.map((file, index) => processSingleFile({ userId, jobId, file, index })),
   );
 
   const uploaded = results.filter(Boolean).length;
