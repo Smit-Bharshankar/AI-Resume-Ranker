@@ -1,10 +1,17 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ApiClientError } from "../../api/axiosClient";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { CandidateTable } from "../../components/candidates/CandidateTable";
 import { UploadResumeDropzone } from "../../components/candidates/UploadResumeDropzone";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../components/ui/Breadcrumb";
 import { Card } from "../../components/ui/Card";
 import { useDeleteResume } from "../../hooks/resumes/useDeleteResume";
 import { useUpdateCandidateStage } from "../../hooks/resumes/useUpdateCandidateStage";
@@ -16,7 +23,6 @@ import {
   getCandidateStageLabel,
 } from "../../utils/candidateStageUtils";
 import {
-  isResumeProcessingStatus,
   shouldPollResumeStatus,
 } from "../../utils/resumeStatusUtils";
 
@@ -59,41 +65,11 @@ export function CandidatesListPage() {
   };
 
   const handleDeleteResume = async (resume: Resume) => {
-    const processingWarning = isResumeProcessingStatus(resume.status)
-      ? " This resume is still processing."
-      : "";
-    const firstConfirm = window.confirm(
-      `Delete this resume permanently?${processingWarning} This cannot be undone.`
-    );
-
-    if (!firstConfirm) {
-      return;
-    }
-
-    try {
-      await deleteResumeMutation.mutateAsync({
-        resumeId: resume.id,
-        jobId: resume.jobId,
-      });
-    } catch (error) {
-      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
-        return;
-      }
-
-      const forceConfirm = window.confirm(
-        "Resume is still processing. Delete anyway and cancel processing jobs?"
-      );
-
-      if (!forceConfirm) {
-        return;
-      }
-
-      await deleteResumeMutation.mutateAsync({
-        resumeId: resume.id,
-        jobId: resume.jobId,
-        confirm: true,
-      });
-    }
+    await deleteResumeMutation.mutateAsync({
+      resumeId: resume.id,
+      jobId: resume.jobId,
+      confirm: true,
+    });
   };
 
   if (!jobId) {
@@ -106,14 +82,31 @@ export function CandidatesListPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/jobs">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={`/jobs/${jobId}`}>Job</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Candidates</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold text-slate-900">Candidates</h1>
           <p className="text-sm text-slate-600">Job ID: {jobId}</p>
         </div>
-        <Link className="text-sm text-slate-600 underline" to={`/jobs/${jobId}`}>
-          Back to Job
-        </Link>
       </div>
 
       <UploadResumeDropzone

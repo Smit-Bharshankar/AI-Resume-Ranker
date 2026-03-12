@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAnalyticsEvents } from "../../analytics/events";
-import { ApiClientError } from "../../api/axiosClient";
 import { CandidateProfileHeader } from "../../components/candidates/CandidateProfileHeader";
 import { CandidateSkillsMatch } from "../../components/candidates/CandidateSkillsMatch";
+import { DeleteConfirmButton } from "../../components/common/DeleteConfirmButton";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { InsightInterviewQuestions } from "../../components/insights/InsightInterviewQuestions";
@@ -13,7 +13,14 @@ import { InsightSummary } from "../../components/insights/InsightSummary";
 import { InsightWeaknesses } from "../../components/insights/InsightWeaknesses";
 import { ScoreBreakdown } from "../../components/scoring/ScoreBreakdown";
 import { ScoreDisplay } from "../../components/scoring/ScoreDisplay";
-import { Button } from "../../components/ui/Button";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../components/ui/Breadcrumb";
 import { Card } from "../../components/ui/Card";
 import { useJob } from "../../hooks/jobs/useJob";
 import { useCandidateResumeDetail } from "../../hooks/resumes/useCandidateResumeDetail";
@@ -79,44 +86,12 @@ export function CandidateDetailPage() {
     if (!resume) {
       return;
     }
-
-    const processingWarning = isResumeProcessingStatus(resume.status)
-      ? " This resume is still processing."
-      : "";
-    const firstConfirm = window.confirm(
-      `Delete this resume permanently?${processingWarning} This cannot be undone.`
-    );
-
-    if (!firstConfirm) {
-      return;
-    }
-
-    try {
-      await deleteResumeMutation.mutateAsync({
-        resumeId: resume.id,
-        jobId: resume.jobId,
-      });
-      void navigate(`/jobs/${resume.jobId}/candidates`);
-    } catch (error) {
-      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
-        return;
-      }
-
-      const forceConfirm = window.confirm(
-        "Resume is still processing. Delete anyway and cancel processing jobs?"
-      );
-
-      if (!forceConfirm) {
-        return;
-      }
-
-      await deleteResumeMutation.mutateAsync({
-        resumeId: resume.id,
-        jobId: resume.jobId,
-        confirm: true,
-      });
-      void navigate(`/jobs/${resume.jobId}/candidates`);
-    }
+    await deleteResumeMutation.mutateAsync({
+      resumeId: resume.id,
+      jobId: resume.jobId,
+      confirm: true,
+    });
+    void navigate(`/jobs/${resume.jobId}/candidates`);
   };
 
   if (!resumeId) {
@@ -159,21 +134,42 @@ export function CandidateDetailPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/jobs">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={`/jobs/${resume.jobId}`}>Job</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={`/jobs/${resume.jobId}/candidates`}>Candidates</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Candidate Profile</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Candidate Profile</h1>
         <div className="flex items-center gap-2">
-          <Button
-            variant="danger"
+          <DeleteConfirmButton
             disabled={deleteResumeMutation.isPending}
-            onClick={() => {
-              void handleDeleteResume();
-            }}
-          >
-            {deleteResumeMutation.isPending ? "Deleting..." : "Delete Resume"}
-          </Button>
-          <Link className="text-sm text-slate-600 underline" to={`/jobs/${resume.jobId}/candidates`}>
-            Back to Candidates
-          </Link>
+            isPending={deleteResumeMutation.isPending}
+            confirmTitle="Delete this resume?"
+            confirmDescription="This will permanently delete the resume and related analysis."
+            onConfirm={handleDeleteResume}
+          />
         </div>
       </div>
 

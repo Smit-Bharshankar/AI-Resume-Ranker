@@ -19,7 +19,7 @@ export function ErrorState({
       <p className="mt-1 text-sm">{message}</p>
       {onRetry ? (
         <div className="mt-3">
-          <Button variant="danger" onClick={onRetry}>
+          <Button variant="destructive" onClick={onRetry}>
             {retryLabel}
           </Button>
         </div>

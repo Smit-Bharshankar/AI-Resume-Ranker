@@ -18,14 +18,14 @@ const stageLabelMap: Record<CandidateStage, string> = {
   HIRED: "Hired",
 };
 
-const stageBadgeToneMap: Record<
+const stageBadgeVariantMap: Record<
   CandidateStage,
-  "neutral" | "info" | "warning" | "danger" | "success"
+  "secondary" | "info" | "warning" | "destructive" | "success"
 > = {
-  NEW: "neutral",
+  NEW: "secondary",
   SHORTLISTED: "info",
   INTERVIEWING: "warning",
-  REJECTED: "danger",
+  REJECTED: "destructive",
   HIRED: "success",
 };
 
@@ -41,6 +41,6 @@ export const isCandidateStage = (value: unknown): value is CandidateStage =>
 export const getCandidateStageLabel = (stage: CandidateStage): string =>
   stageLabelMap[stage];
 
-export const getCandidateStageBadgeTone = (
+export const getCandidateStageBadgeVariant = (
   stage: CandidateStage,
-): "neutral" | "info" | "warning" | "danger" | "success" => stageBadgeToneMap[stage];
+): "secondary" | "info" | "warning" | "destructive" | "success" => stageBadgeVariantMap[stage];

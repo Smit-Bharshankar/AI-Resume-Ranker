@@ -6,8 +6,8 @@ import {
 import { ApiClientError } from "../../api/axiosClient";
 import { Resume } from "../../types/resume";
 import { getCandidateStageLabel } from "../../utils/candidateStageUtils";
-import { showToast } from "../../utils/toast";
 import { resumeQueryKeys } from "./useResumes";
+import { toast } from "sonner";
 
 type MutationContext = {
   previousDetail?: Resume;
@@ -94,17 +94,11 @@ export const useUpdateCandidateStage = () => {
         queryClient.setQueryData(queryKey, previousData);
       });
 
-      showToast({
-        message: mapStageUpdateErrorMessage(error),
-        tone: "error",
-      });
+      toast.error(mapStageUpdateErrorMessage(error));
     },
     onSuccess: (updatedResume) => {
       queryClient.setQueryData(resumeQueryKeys.detail(updatedResume.id), updatedResume);
-      showToast({
-        message: `Stage updated to ${getCandidateStageLabel(updatedResume.stage)}.`,
-        tone: "success",
-      });
+      toast.success(`Stage updated to ${getCandidateStageLabel(updatedResume.stage)}.`);
     },
     onSettled: async (_, __, variables) => {
       await queryClient.invalidateQueries({

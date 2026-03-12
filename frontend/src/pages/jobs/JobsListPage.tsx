@@ -3,8 +3,13 @@ import { ErrorState } from "../../components/common/ErrorState";
 import { EmptyState } from "../../components/common/EmptyState";
 import { Loader } from "../../components/common/Loader";
 import { JobCard } from "../../components/jobs/JobCard";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+} from "../../components/ui/Breadcrumb";
 import { Button } from "../../components/ui/Button";
-import { ApiClientError } from "../../api/axiosClient";
 import { Job } from "../../types/job";
 import { useDeleteJob } from "../../hooks/jobs/useDeleteJob";
 import { useJobs } from "../../hooks/jobs/useJobs";
@@ -15,35 +20,19 @@ export function JobsListPage() {
   const jobs = Array.isArray(jobsQuery.data) ? jobsQuery.data : [];
 
   const handleDeleteJob = async (job: Job) => {
-    const firstConfirm = window.confirm(
-      "Delete this job and all associated resumes? This cannot be undone."
-    );
-
-    if (!firstConfirm) {
-      return;
-    }
-
-    try {
-      await deleteJobMutation.mutateAsync({ jobId: job.id });
-    } catch (error) {
-      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
-        return;
-      }
-
-      const forceConfirm = window.confirm(
-        "Some resumes are still processing. Delete anyway and cancel processing jobs?"
-      );
-
-      if (!forceConfirm) {
-        return;
-      }
-
-      await deleteJobMutation.mutateAsync({ jobId: job.id, confirm: true });
-    }
+    await deleteJobMutation.mutateAsync({ jobId: job.id, confirm: true });
   };
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage>Home</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Jobs</h1>
         <Link to="/jobs/create">

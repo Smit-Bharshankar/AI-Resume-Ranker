@@ -1,5 +1,8 @@
 import { CandidateStage } from "../../types/resume";
-import { getCandidateStageBadgeTone, getCandidateStageLabel } from "../../utils/candidateStageUtils";
+import {
+  getCandidateStageBadgeVariant,
+  getCandidateStageLabel,
+} from "../../utils/candidateStageUtils";
 import { Badge } from "../ui/Badge";
 
 type CandidateStageBadgeProps = {
@@ -9,7 +12,7 @@ type CandidateStageBadgeProps = {
 
 export function CandidateStageBadge({ stage, className }: CandidateStageBadgeProps) {
   return (
-    <Badge tone={getCandidateStageBadgeTone(stage)} className={className}>
+    <Badge variant={getCandidateStageBadgeVariant(stage)} className={className}>
       {getCandidateStageLabel(stage)}
     </Badge>
   );

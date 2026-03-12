@@ -5,8 +5,8 @@ import {
   DeleteResumeResponse,
 } from "../../api/resumesApi";
 import { ApiClientError } from "../../api/axiosClient";
-import { showToast } from "../../utils/toast";
 import { resumeQueryKeys } from "./useResumes";
+import { toast } from "sonner";
 
 const mapDeleteResumeErrorMessage = (error: Error): string => {
   if (!(error instanceof ApiClientError)) {
@@ -47,18 +47,11 @@ export const useDeleteResume = () => {
         }),
       ]);
 
-      showToast({
-        message: result.message || "Resume deleted successfully.",
-        tone: "success",
-      });
+      toast.success(result.message || "Resume deleted successfully.");
     },
     onError: (error) => {
-      showToast({
-        message: mapDeleteResumeErrorMessage(error),
-        tone: "error",
-      });
+      toast.error(mapDeleteResumeErrorMessage(error));
     },
     retry: 0,
   });
 };
-

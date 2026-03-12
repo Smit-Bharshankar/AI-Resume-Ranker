@@ -3,6 +3,7 @@ import { CandidateStage, Resume } from "../../types/resume";
 import { Button } from "../ui/Button";
 import { CandidateStatusBadge } from "./CandidateStatusBadge";
 import { CandidateStageSelector } from "../workflow/CandidateStageSelector";
+import { DeleteConfirmButton } from "../common/DeleteConfirmButton";
 
 type CandidateRowProps = {
   resume: Resume;
@@ -58,15 +59,13 @@ export function CandidateRow({
             <Button variant="secondary">View Details</Button>
           </Link>
           {onDelete ? (
-            <Button
-              variant="danger"
+            <DeleteConfirmButton
               disabled={isDeleting}
-              onClick={() => {
-                onDelete(resume);
-              }}
-            >
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
+              isPending={isDeleting}
+              confirmTitle="Delete this resume?"
+              confirmDescription="This will permanently delete the resume and related analysis."
+              onConfirm={() => onDelete(resume)}
+            />
           ) : null}
         </div>
       </td>

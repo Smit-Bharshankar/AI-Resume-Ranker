@@ -1,26 +1,37 @@
-import { PropsWithChildren } from "react";
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 
-type BadgeTone = "neutral" | "success" | "warning" | "danger" | "info";
+import { cn } from "@/lib/utils";
 
-type BadgeProps = PropsWithChildren<{
-  tone?: BadgeTone;
-  className?: string;
-}>;
+const badgeVariants = cva(
+  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors",
+  {
+    variants: {
+      variant: {
+        default: "border-transparent bg-primary text-primary-foreground",
+        secondary: "border-transparent bg-secondary text-secondary-foreground",
+        destructive: "border-transparent bg-destructive text-white",
+        outline: "text-foreground",
+        success: "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200",
+        warning: "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200",
+        info: "border-transparent bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200",
+      },
+    },
+    defaultVariants: {
+      variant: "secondary",
+    },
+  }
+);
 
-const toneClasses: Record<BadgeTone, string> = {
-  neutral: "bg-slate-100 text-slate-700",
-  success: "bg-emerald-100 text-emerald-700",
-  warning: "bg-amber-100 text-amber-700",
-  danger: "bg-red-100 text-red-700",
-  info: "bg-blue-100 text-blue-700",
-};
+type BadgeProps = React.ComponentProps<"span"> &
+  VariantProps<typeof badgeVariants>;
 
-export function Badge({ children, tone = "neutral", className = "" }: BadgeProps) {
+export function Badge({ className, variant, ...props }: BadgeProps) {
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold tracking-wide ${toneClasses[tone]} ${className}`.trim()}
-    >
-      {children}
-    </span>
+      data-slot="badge"
+      className={cn(badgeVariants({ variant, className }))}
+      {...props}
+    />
   );
 }

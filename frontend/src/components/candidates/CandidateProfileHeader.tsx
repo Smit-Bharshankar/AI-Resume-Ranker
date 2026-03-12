@@ -21,11 +21,11 @@ type CandidateProfileHeaderProps = {
   className?: string;
 };
 
-const getRecommendationTone = (
+const getRecommendationVariant = (
   recommendation: Insights["recommendation"] | undefined
-): "neutral" | "success" | "warning" | "danger" => {
+): "secondary" | "success" | "warning" | "destructive" => {
   if (!recommendation) {
-    return "neutral";
+    return "secondary";
   }
 
   if (recommendation === "STRONG_FIT" || recommendation === "GOOD_FIT") {
@@ -36,7 +36,7 @@ const getRecommendationTone = (
     return "warning";
   }
 
-  return "danger";
+  return "destructive";
 };
 
 const toRecommendationLabel = (
@@ -76,7 +76,7 @@ function CandidateProfileHeaderComponent({
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <CandidateStatusBadge status={status} />
-            {isProcessing ? <Badge tone="info">Processing</Badge> : null}
+            {isProcessing ? <Badge variant="info">Processing</Badge> : null}
           </div>
         </div>
 
@@ -87,7 +87,7 @@ function CandidateProfileHeaderComponent({
           </p>
           <p className="flex items-center gap-2">
             <span className="font-semibold text-slate-900">Recommendation:</span>
-            <Badge tone={getRecommendationTone(recommendation)}>
+            <Badge variant={getRecommendationVariant(recommendation)}>
               {toRecommendationLabel(recommendation)}
             </Badge>
           </p>

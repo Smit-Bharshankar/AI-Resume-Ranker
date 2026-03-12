@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAnalyticsEvents } from "../../analytics/events";
-import { ApiClientError } from "../../api/axiosClient";
+import { DeleteConfirmButton } from "../../components/common/DeleteConfirmButton";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { ActivateJobButton } from "../../components/jobs/ActivateJobButton";
 import { ExtractRequirementsButton } from "../../components/jobs/ExtractRequirementsButton";
 import { JobStatusBadge } from "../../components/jobs/JobStatusBadge";
-import { Button } from "../../components/ui/Button";
 import { RequirementsEditor } from "../../components/jobs/RequirementsEditor";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../components/ui/Breadcrumb";
 import { Card } from "../../components/ui/Card";
 import { useDeleteJob } from "../../hooks/jobs/useDeleteJob";
 import { useJob } from "../../hooks/jobs/useJob";
@@ -44,32 +51,8 @@ export function JobDetailPage() {
     if (!job) {
       return;
     }
-
-    const firstConfirm = window.confirm(
-      "Delete this job and all associated resumes? This cannot be undone."
-    );
-    if (!firstConfirm) {
-      return;
-    }
-
-    try {
-      await deleteJobMutation.mutateAsync({ jobId: job.id });
-      void navigate("/jobs");
-    } catch (error) {
-      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
-        return;
-      }
-
-      const forceConfirm = window.confirm(
-        "Some resumes are still processing. Delete anyway and cancel processing jobs?"
-      );
-      if (!forceConfirm) {
-        return;
-      }
-
-      await deleteJobMutation.mutateAsync({ jobId: job.id, confirm: true });
-      void navigate("/jobs");
-    }
+    await deleteJobMutation.mutateAsync({ jobId: job.id, confirm: true });
+    void navigate("/jobs");
   };
 
   useEffect(() => {
@@ -138,24 +121,33 @@ export function JobDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/jobs">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{job.title}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-2">
           <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
           <JobStatusBadge status={job.status} />
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="danger"
+          <DeleteConfirmButton
             disabled={deleteJobMutation.isPending}
-            onClick={() => {
-              void handleDeleteJob();
-            }}
-          >
-            {deleteJobMutation.isPending ? "Deleting..." : "Delete Job"}
-          </Button>
-          <Link className="text-sm text-slate-600 underline" to="/jobs">
-            Back to Jobs
-          </Link>
+            isPending={deleteJobMutation.isPending}
+            confirmTitle="Delete this job?"
+            confirmDescription="This will permanently delete the job and all associated resumes."
+            onConfirm={handleDeleteJob}
+          />
         </div>
       </div>
 

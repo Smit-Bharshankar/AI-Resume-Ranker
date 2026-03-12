@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteJob, DeleteJobInput, DeleteJobResponse } from "../../api/jobsApi";
 import { resumeQueryKeys } from "../resumes/useResumes";
 import { jobQueryKeys } from "./useJobs";
-import { showToast } from "../../utils/toast";
 import { ApiClientError } from "../../api/axiosClient";
+import { toast } from "sonner";
 
 const mapDeleteJobErrorMessage = (error: Error): string => {
   if (!(error instanceof ApiClientError)) {
@@ -37,18 +37,11 @@ export const useDeleteJob = () => {
         queryClient.invalidateQueries({ queryKey: resumeQueryKeys.all }),
       ]);
 
-      showToast({
-        message: result.message || "Job deleted successfully.",
-        tone: "success",
-      });
+      toast.success(result.message || "Job deleted successfully.");
     },
     onError: (error) => {
-      showToast({
-        message: mapDeleteJobErrorMessage(error),
-        tone: "error",
-      });
+      toast.error(mapDeleteJobErrorMessage(error));
     },
     retry: 0,
   });
 };
-

@@ -5,6 +5,14 @@ import { useAnalyticsEvents } from "../../analytics/events";
 import { createJob } from "../../api/jobsApi";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "../../components/ui/Breadcrumb";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Job } from "../../types/job";
@@ -53,11 +61,22 @@ export function CreateJobPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/jobs">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Create Job</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Create Job</h1>
-        <Link className="text-sm text-slate-600 underline" to="/jobs">
-          Back to Jobs
-        </Link>
       </div>
 
       <Card>

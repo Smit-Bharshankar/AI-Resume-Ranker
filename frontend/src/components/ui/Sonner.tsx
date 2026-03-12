@@ -1,0 +1,5 @@
+import { Toaster as Sonner, ToasterProps } from "sonner";
+
+export function Toaster(props: ToasterProps) {
+  return <Sonner closeButton richColors position="top-right" {...props} />;
+}

@@ -13,20 +13,20 @@ type JobStatusBadgeProps = {
 
 export function JobStatusBadge({ status }: JobStatusBadgeProps) {
   if (isDraft(status)) {
-    return <Badge tone="neutral">DRAFT</Badge>;
+    return <Badge variant="secondary">DRAFT</Badge>;
   }
 
   if (isExtractingRequirements(status)) {
-    return <Badge tone="warning">EXTRACTING REQUIREMENTS</Badge>;
+    return <Badge variant="warning">EXTRACTING REQUIREMENTS</Badge>;
   }
 
   if (isRequirementsStructured(status)) {
-    return <Badge tone="info">REQUIREMENTS STRUCTURED</Badge>;
+    return <Badge variant="info">REQUIREMENTS STRUCTURED</Badge>;
   }
 
   if (isJobActive(status)) {
-    return <Badge tone="success">ACTIVE</Badge>;
+    return <Badge variant="success">ACTIVE</Badge>;
   }
 
-  return <Badge tone="danger">FAILED STRUCTURE</Badge>;
+  return <Badge variant="destructive">FAILED STRUCTURE</Badge>;
 }

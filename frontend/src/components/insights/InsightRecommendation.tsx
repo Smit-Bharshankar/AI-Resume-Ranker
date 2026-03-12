@@ -9,11 +9,11 @@ type InsightRecommendationProps = {
   className?: string;
 };
 
-const getTone = (
+const getVariant = (
   recommendation: Insights["recommendation"] | undefined
-): "neutral" | "success" | "warning" | "danger" => {
+): "secondary" | "success" | "warning" | "destructive" => {
   if (!recommendation) {
-    return "neutral";
+    return "secondary";
   }
 
   if (recommendation === "STRONG_FIT" || recommendation === "GOOD_FIT") {
@@ -24,7 +24,7 @@ const getTone = (
     return "warning";
   }
 
-  return "danger";
+  return "destructive";
 };
 
 const toDisplayRecommendation = (
@@ -66,7 +66,7 @@ function InsightRecommendationComponent({
       hasContent={displayRecommendation.length > 0}
       className={className}
     >
-      <Badge tone={getTone(recommendation)}>{displayRecommendation}</Badge>
+      <Badge variant={getVariant(recommendation)}>{displayRecommendation}</Badge>
     </InsightSection>
   );
 }
