@@ -36,8 +36,8 @@ export default function Navbar() {
           className={cn(
             "mx-auto flex w-full max-w-6xl items-center justify-between rounded-2xl px-4 py-3 transition-all duration-300 md:px-6",
             isGlass
-              ? "border border-white/20 bg-white/60 text-foreground shadow-lg backdrop-blur-md"
-              : "border border-transparent bg-transparent text-black"
+              ? "border border-white/20 bg-white/60 text-foreground shadow-lg backdrop-blur-md dark:border-white/10 dark:bg-black/40"
+              : "border border-transparent bg-transparent text-foreground dark:text-white"
           )}
         >
           <Link href="/" className="text-lg font-semibold tracking-tight">
@@ -54,7 +54,7 @@ export default function Navbar() {
                   "after:absolute after:bottom-[-1.5] after:left-0 after:h-0.5 after:w-0 after:bg-current after:transition-all after:duration-300 hover:after:w-full", // The animation logic
                   isGlass
                     ? "text-foreground/80 hover:text-foreground"
-                    : "text-black/85 hover:text-gray-800"
+                    : "text-foreground/85 hover:text-foreground dark:text-white/85 dark:hover:text-white"
                 )}
               >
                 {link.label}
@@ -65,7 +65,7 @@ export default function Navbar() {
           <div className="hidden items-center gap-2 lg:flex">
             <Button
               variant={isGlass ? "outline" : "ghost"}
-              className={cn(isGlass ? "" : "text-gray-800 hover:bg-black/15 hover:text-black ")}
+              className={cn(isGlass ? "" : "text-foreground hover:bg-black/10 hover:text-foreground dark:text-white dark:hover:bg-white/15 dark:hover:text-white")}
               asChild
             >
               <Link href="/contact">Login</Link>
@@ -80,7 +80,7 @@ export default function Navbar() {
             aria-label="Open navigation menu"
             className={cn(
               "inline-flex items-center justify-center rounded-md p-2 transition lg:hidden",
-              isGlass ? "text-foreground hover:bg-black/5" : "text-white hover:bg-white/15"
+              isGlass ? "text-foreground hover:bg-black/5 dark:hover:bg-white/10" : "text-foreground hover:bg-black/10 dark:text-white dark:hover:bg-white/15"
             )}
             onClick={() => setIsMobileMenuOpen(true)}
           >

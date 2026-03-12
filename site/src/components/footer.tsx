@@ -1,8 +1,15 @@
-import Link from "next/link";
+"use client";
 
+import Link from "next/link";
+import { Moon, Sun } from "lucide-react";
+
+import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 
 export default function Footer() {
+  const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
+
   return (
     <footer className="relative z-20 mt-10 border-t border-border/70 bg-background px-6 pb-12 pt-8 md:px-10">
       <div className="mx-auto w-full max-w-6xl">
@@ -64,6 +71,19 @@ export default function Footer() {
               </Button>
               <Button variant="outline" asChild>
                 <Link href="/contact">Login</Link>
+              </Button>
+            </div>
+            <div className="pt-2">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Theme</p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setTheme(isDark ? "light" : "dark")}
+                className="gap-2"
+              >
+                {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                {/* {isDark ? "Switch to Light" : "Switch to Dark"} */}
               </Button>
             </div>
           </div>

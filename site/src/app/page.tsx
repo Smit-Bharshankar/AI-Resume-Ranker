@@ -10,7 +10,7 @@ import Stats from "@/components/stats";
 import Workflow from "@/components/workflow";
 
 function SectionDivider() {
-  return <div className="my-24 h-px bg-linear-to-r from-transparent via-gray-300 to-transparent" />;
+  return <div className="my-24 h-px bg-linear-to-r from-transparent via-border to-transparent" />;
 }
 
 export default function Home() {

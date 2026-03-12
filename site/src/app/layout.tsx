@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,8 +50,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Script id="theme-init" strategy="beforeInteractive">
+          {`(() => {
+            try {
+              const saved = localStorage.getItem("sortres-theme");
+              const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+              const resolved = saved === "light" || saved === "dark" ? saved : (prefersDark ? "dark" : "light");
+              document.documentElement.classList.toggle("dark", resolved === "dark");
+            } catch (_) {}
+          })();`}
+        </Script>
         <CursorSpotlight />
         <SiteShell>{children}</SiteShell>
 

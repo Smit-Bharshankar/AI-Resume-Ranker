@@ -21,7 +21,7 @@ export default function ProductPreview() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
           viewport={{ once: true, amount: 0.25 }}
-          className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/60 p-6 shadow-lg backdrop-blur-md sm:p-8"
+          className="relative overflow-hidden rounded-2xl border border-border/70 bg-background/75 p-6 shadow-lg backdrop-blur-md sm:p-8"
         >
           <div className="absolute -top-10 -right-10 size-32 rounded-full bg-blue-500/15 blur-2xl" />
           <div className="absolute -bottom-14 -left-10 size-40 rounded-full bg-purple-500/15 blur-2xl" />

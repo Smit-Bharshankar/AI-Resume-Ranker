@@ -43,7 +43,7 @@ export default function CandidateRankingDemo() {
   const ranked = useMemo(() => [...candidates].sort((a, b) => b.score - a.score), [candidates]);
 
   return (
-    <div className="rounded-2xl border border-white/60 bg-white/60 p-5 shadow-lg backdrop-blur-md">
+    <div className="rounded-2xl border border-border/70 bg-background/75 p-5 shadow-lg backdrop-blur-md">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">Live candidate ordering</h3>
         <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">AI Ranking Demo</Badge>
@@ -59,7 +59,7 @@ export default function CandidateRankingDemo() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ type: "spring", stiffness: 420, damping: 34, mass: 0.7 }}
-              className="rounded-xl border border-white/70 bg-white/70 p-3"
+              className="rounded-xl border border-border/70 bg-background/80 p-3"
             >
               <div className="mb-2 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">

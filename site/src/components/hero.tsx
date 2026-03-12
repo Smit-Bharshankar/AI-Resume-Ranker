@@ -18,7 +18,7 @@ export default function Hero() {
     <section id="hero-section" className="relative px-6 pt-24 md:px-10 md:pt-28">
       <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
         <motion.div {...reveal} className="relative z-10 space-y-6">
-          <div className="inline-flex items-center rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur-md">
+          <div className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur-md">
             AI Resume Screening Platform
           </div>
           <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-balance text-4xl font-semibold tracking-tight text-transparent sm:text-5xl lg:text-6xl">
@@ -62,12 +62,12 @@ export default function Hero() {
             transition={{ duration: 3.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 0.15 }}
           />
 
-          <Card className="border border-white/60 bg-white/60 shadow-lg backdrop-blur-md">
+          <Card className="border border-border/70 bg-background/75 shadow-lg backdrop-blur-md">
             <CardHeader>
               <CardTitle className="text-lg">Workflow Preview</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-lg border border-white/50 bg-white/70 p-4 backdrop-blur-sm">
+              <div className="rounded-lg border border-border/70 bg-background/80 p-4 backdrop-blur-sm">
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                   <UploadCloud className="size-4 text-primary" />
                   Upload Resumes
@@ -75,7 +75,7 @@ export default function Hero() {
                 <p className="text-sm text-muted-foreground">132 resumes processed</p>
               </div>
 
-              <div className="rounded-lg border border-white/50 bg-white/70 p-4 backdrop-blur-sm">
+              <div className="rounded-lg border border-border/70 bg-background/80 p-4 backdrop-blur-sm">
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium">
                   <Sparkles className="size-4 text-primary" />
                   AI Candidate Ranking

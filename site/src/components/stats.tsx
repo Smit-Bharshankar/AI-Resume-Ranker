@@ -49,7 +49,7 @@ export default function Stats() {
               transition={{ duration: 0.5, delay: index * 0.08, ease: "easeOut" }}
               viewport={{ once: true, amount: 0.3 }}
             >
-              <Card className="h-full rounded-xl border border-white/60 bg-white/60 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
+              <Card className="h-full rounded-xl border border-border/70 bg-background/75 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
                 <CardContent className="space-y-2 pt-6">
                   <div className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl">
                     <CountUp end={stat.value} duration={2} enableScrollSpy scrollSpyOnce />

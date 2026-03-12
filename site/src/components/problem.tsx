@@ -51,7 +51,7 @@ export default function Problem() {
                 transition={{ duration: 0.5, delay: index * 0.08, ease: "easeOut" }}
                 viewport={{ once: true, amount: 0.3 }}
               >
-                <Card className="h-full rounded-xl border border-white/60 bg-white/60 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                <Card className="h-full rounded-xl border border-border/70 bg-background/75 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardHeader className="space-y-3">
                     <div className="flex size-11 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-white shadow-md">
                       <Icon className="size-5" />
@@ -70,4 +70,3 @@ export default function Problem() {
     </section>
   );
 }
-

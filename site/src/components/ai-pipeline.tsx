@@ -79,7 +79,7 @@ export default function AIPipeline() {
                       delay: index * 0.45,
                     }}
                   />
-                  <div className="h-full rounded-xl border border-white/60 bg-white/60 p-5 shadow-lg backdrop-blur-md">
+                  <div className="h-full rounded-xl border border-border/70 bg-background/75 p-5 shadow-lg backdrop-blur-md">
                     <div className="mb-4 inline-flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white">
                       <Icon className="size-5" />
                     </div>
