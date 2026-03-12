@@ -2,7 +2,6 @@ import BetaCTA from "@/components/beta-cta";
 import AIPipeline from "@/components/ai-pipeline";
 import FAQ from "@/components/faq";
 import Features from "@/components/features";
-import Footer from "@/components/footer";
 import Hero from "@/components/hero";
 import HowItWorks from "@/components/how-it-works";
 import Problem from "@/components/problem";
@@ -16,7 +15,7 @@ function SectionDivider() {
 
 export default function Home() {
   return (
-    <div className="relative overflow-hidden bg-linear-to-b from-white to-gray-100">
+    <div className="relative overflow-hidden">
       <div className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-blue-400/25 blur-3xl" />
       <div className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-purple-400/25 blur-3xl" />
 
@@ -40,7 +39,6 @@ export default function Home() {
         <BetaCTA />
         <SectionDivider />
         <FAQ />
-        <Footer />
       </main>
     </div>
   );

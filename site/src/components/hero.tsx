@@ -15,8 +15,7 @@ const reveal = {
 
 export default function Hero() {
   return (
-    <section className="relative px-6 pt-16 md:px-10 md:pt-24">
-      <div className="pointer-events-none absolute inset-0 opacity-25 [background-image:linear-gradient(to_right,#e5e7eb_1px,transparent_1px),linear-gradient(to_bottom,#e5e7eb_1px,transparent_1px)] [background-size:40px_40px]" />
+    <section id="hero-section" className="relative px-6 pt-24 md:px-10 md:pt-28">
       <div className="mx-auto grid w-full max-w-6xl items-center gap-10 lg:grid-cols-2">
         <motion.div {...reveal} className="relative z-10 space-y-6">
           <div className="inline-flex items-center rounded-full border border-white/60 bg-white/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur-md">

@@ -7,7 +7,7 @@ export default function ContactPage() {
         </h1>
 
         <p className="text-muted-foreground">
-          We're happy to help with questions, feedback, or support requests.
+          We&apos;re happy to help with questions, feedback, or support requests.
         </p>
 
         <p>
