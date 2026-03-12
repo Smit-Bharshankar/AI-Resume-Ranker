@@ -1,4 +1,30 @@
 import jobRepository from "./job.repository.js";
+import logger from "../../utils/logger.js";
+import supabaseStorage from "../../storage/supabaseStorage.js";
+import { PROCESSING_RESUME_STATUSES } from "../resume/resume.service.js";
+import {
+  cancelJobExtractionQueueJob,
+  cancelResumeQueueJobs,
+} from "../../queue/deletionCleanup.js";
+
+class JobDeletionServiceError extends Error {
+  constructor(message, statusCode, metadata = {}) {
+    super(message);
+    this.name = "JobDeletionServiceError";
+    this.statusCode = statusCode;
+    this.metadata = metadata;
+  }
+}
+
+const isStorageNotFoundError = (error) => {
+  const message = `${error?.message ?? ""} ${error?.cause?.message ?? ""}`.toLowerCase();
+  return (
+    message.includes("not found") ||
+    message.includes("not exist") ||
+    message.includes("no such") ||
+    message.includes("missing")
+  );
+};
 
 const createJob = async ({ userId, title, rawDescription }) => {
   return jobRepository.createJob({ userId, title, rawDescription });
@@ -66,6 +92,107 @@ const markRequirementsExtractionFailed = async ({
   });
 };
 
+const deleteJobByOwner = async ({ jobId, userId, confirm = false }) => {
+  const job = await jobRepository.getJobDeletionContext(jobId);
+
+  if (!job) {
+    throw new JobDeletionServiceError("Job not found", 404);
+  }
+
+  if (job.userId !== userId) {
+    throw new JobDeletionServiceError("Forbidden", 403);
+  }
+
+  const resumes = await jobRepository.getResumesForJob(jobId);
+  const processingResumes = resumes.filter((resume) =>
+    PROCESSING_RESUME_STATUSES.has(resume.status),
+  );
+
+  if (!confirm && processingResumes.length > 0) {
+    throw new JobDeletionServiceError(
+      "Some resumes are still processing. Retry with confirm=true to delete.",
+      409,
+      {
+        requiresConfirmation: true,
+        processingResumeCount: processingResumes.length,
+        totalResumeCount: resumes.length,
+      },
+    );
+  }
+
+  await Promise.all(
+    resumes.map((resume) =>
+      cancelResumeQueueJobs({
+        resumeId: resume.id,
+        userId,
+        jobId,
+      }),
+    ),
+  );
+
+  await cancelJobExtractionQueueJob({ jobId, userId });
+
+  const storagePaths = resumes
+    .map((resume) => resume.storagePath)
+    .filter((path) => typeof path === "string" && path.trim().length > 0);
+  const resumeIdByStoragePath = new Map(
+    resumes.map((resume) => [resume.storagePath, resume.id]),
+  );
+
+  if (storagePaths.length > 0) {
+    try {
+      await supabaseStorage.removeResumes(storagePaths);
+
+      for (const path of storagePaths) {
+        logger.info("resume_storage_deleted", {
+          userId,
+          jobId,
+          resumeId: resumeIdByStoragePath.get(path) ?? null,
+          storagePath: path,
+          skipped: false,
+        });
+      }
+    } catch (error) {
+      if (!isStorageNotFoundError(error)) {
+        throw new JobDeletionServiceError("Failed to delete one or more resume files", 502);
+      }
+
+      for (const path of storagePaths) {
+        logger.info("resume_storage_deleted", {
+          userId,
+          jobId,
+          resumeId: resumeIdByStoragePath.get(path) ?? null,
+          storagePath: path,
+          skipped: true,
+          reason: "already_missing",
+        });
+      }
+    }
+  }
+
+  const deletedResumeCount = await jobRepository.deleteResumesByJobId({
+    jobId,
+    userId,
+  });
+  const deletedJob = await jobRepository.deleteJobScoped({
+    id: jobId,
+    userId,
+  });
+
+  logger.info("job_deleted", {
+    userId,
+    jobId,
+    deletedJob,
+    deletedResumeCount,
+    totalResumeCount: resumes.length,
+  });
+
+  return {
+    deletedJob,
+    deletedResumeCount,
+  };
+};
+
 const jobService = {
   createJob,
   getJobsByUserId,
@@ -76,6 +203,9 @@ const jobService = {
   updateStatusIfCurrent,
   completeRequirementsExtraction,
   markRequirementsExtractionFailed,
+  deleteJobByOwner,
+  JobDeletionServiceError,
 };
 
 export default jobService;
+export { JobDeletionServiceError };

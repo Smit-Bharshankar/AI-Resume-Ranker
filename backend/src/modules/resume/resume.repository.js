@@ -159,6 +159,23 @@ const getResumeOwnerContext = async (id) => {
   });
 };
 
+const getResumeDeletionContext = async (id) => {
+  return prisma.resume.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      jobId: true,
+      storagePath: true,
+      status: true,
+      job: {
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
+};
+
 const completeTextExtraction = async ({ id, rawText }) => {
   const result = await prisma.resume.updateMany({
     where: {
@@ -332,6 +349,19 @@ const deleteResume = async (id) => {
   });
 };
 
+const deleteResumeScoped = async ({ id, userId }) => {
+  const result = await prisma.resume.deleteMany({
+    where: {
+      id,
+      job: {
+        userId,
+      },
+    },
+  });
+
+  return result.count > 0;
+};
+
 const getResumesByJob = async (jobId, userId) => {
   return prisma.resume.findMany({
     where: withJobUserScope({ jobId }, userId),
@@ -356,6 +386,7 @@ const resumeRepository = {
   updateLastProcessingFailure,
   getResumeById,
   getResumeOwnerContext,
+  getResumeDeletionContext,
   completeTextExtraction,
   markExtractionFailed,
   completeStructureExtraction,
@@ -366,6 +397,7 @@ const resumeRepository = {
   completeInsightsGeneration,
   markInsightsFailed,
   deleteResume,
+  deleteResumeScoped,
   getResumesByJob,
 };
 

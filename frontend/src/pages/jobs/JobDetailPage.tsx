@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAnalyticsEvents } from "../../analytics/events";
+import { ApiClientError } from "../../api/axiosClient";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { ActivateJobButton } from "../../components/jobs/ActivateJobButton";
 import { ExtractRequirementsButton } from "../../components/jobs/ExtractRequirementsButton";
 import { JobStatusBadge } from "../../components/jobs/JobStatusBadge";
+import { Button } from "../../components/ui/Button";
 import { RequirementsEditor } from "../../components/jobs/RequirementsEditor";
 import { Card } from "../../components/ui/Card";
+import { useDeleteJob } from "../../hooks/jobs/useDeleteJob";
 import { useJob } from "../../hooks/jobs/useJob";
 import { useJobPolling } from "../../hooks/jobs/useJobPolling";
 import {
@@ -19,10 +22,12 @@ import {
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
   const safeJobId = jobId ?? "";
   const [forcePolling, setForcePolling] = useState<boolean>(false);
   const trackedAnalysisCompletions = useRef<Set<string>>(new Set());
   const { trackAnalysisCompleted, trackAnalysisStarted } = useAnalyticsEvents();
+  const deleteJobMutation = useDeleteJob();
 
   const jobQuery = useJob(safeJobId);
   const shouldPollFromStatus = useMemo(() => {
@@ -34,6 +39,38 @@ export function JobDetailPage() {
   const pollingQuery = useJobPolling(safeJobId, forcePolling || shouldPollFromStatus);
 
   const job = pollingQuery.data ?? jobQuery.data;
+
+  const handleDeleteJob = async () => {
+    if (!job) {
+      return;
+    }
+
+    const firstConfirm = window.confirm(
+      "Delete this job and all associated resumes? This cannot be undone."
+    );
+    if (!firstConfirm) {
+      return;
+    }
+
+    try {
+      await deleteJobMutation.mutateAsync({ jobId: job.id });
+      void navigate("/jobs");
+    } catch (error) {
+      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
+        return;
+      }
+
+      const forceConfirm = window.confirm(
+        "Some resumes are still processing. Delete anyway and cancel processing jobs?"
+      );
+      if (!forceConfirm) {
+        return;
+      }
+
+      await deleteJobMutation.mutateAsync({ jobId: job.id, confirm: true });
+      void navigate("/jobs");
+    }
+  };
 
   useEffect(() => {
     if (job && !isExtractingRequirements(job.status)) {
@@ -106,9 +143,20 @@ export function JobDetailPage() {
           <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
           <JobStatusBadge status={job.status} />
         </div>
-        <Link className="text-sm text-slate-600 underline" to="/jobs">
-          Back to Jobs
-        </Link>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="danger"
+            disabled={deleteJobMutation.isPending}
+            onClick={() => {
+              void handleDeleteJob();
+            }}
+          >
+            {deleteJobMutation.isPending ? "Deleting..." : "Delete Job"}
+          </Button>
+          <Link className="text-sm text-slate-600 underline" to="/jobs">
+            Back to Jobs
+          </Link>
+        </div>
       </div>
 
        {isJobActive(job.status) ? (

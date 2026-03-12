@@ -71,16 +71,42 @@ const downloadResume = async (storagePath) => {
 };
 
 const removeResume = async (storagePath) => {
+  return removeResumes([storagePath]);
+};
+
+const removeResumes = async (storagePaths = []) => {
+  const uniquePaths = Array.from(
+    new Set(
+      storagePaths.filter(
+        (path) => typeof path === "string" && path.trim().length > 0,
+      ),
+    ),
+  );
+
+  if (uniquePaths.length === 0) {
+    return {
+      removedPaths: [],
+    };
+  }
+
   try {
-    const { error } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from(env.supabaseStorageBucket)
-      .remove([storagePath]);
+      .remove(uniquePaths);
 
     if (error) {
       throw error;
     }
+
+    return {
+      removedPaths: Array.isArray(data)
+        ? data.map((item) => item?.name).filter(Boolean)
+        : uniquePaths,
+    };
   } catch (error) {
-    throw buildStorageError("remove", error, { storagePath });
+    throw buildStorageError("remove", error, {
+      storagePathCount: uniquePaths.length,
+    });
   }
 };
 
@@ -107,6 +133,7 @@ const supabaseStorage = {
   uploadResume,
   downloadResume,
   removeResume,
+  removeResumes,
   createSignedResumeUrl,
 };
 

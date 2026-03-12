@@ -14,6 +14,16 @@ export type UpdateCandidateStageInput = {
   stage: CandidateStage;
 };
 
+export type DeleteResumeInput = {
+  resumeId: string;
+  confirm?: boolean;
+};
+
+export type DeleteResumeResponse = {
+  success: boolean;
+  message: string;
+};
+
 type UploadResumesOptions = {
   onUploadProgress?: (progressPercent: number) => void;
 };
@@ -245,4 +255,17 @@ export const updateCandidateStage = async ({
   );
 
   return parseResumeDetailResponse(payload);
+};
+
+export const deleteResume = async ({
+  resumeId,
+  confirm = false,
+}: DeleteResumeInput): Promise<DeleteResumeResponse> => {
+  return request<DeleteResumeResponse>(
+    axiosClient.delete<DeleteResumeResponse>(`/resumes/${resumeId}`, {
+      params: {
+        confirm,
+      },
+    })
+  );
 };

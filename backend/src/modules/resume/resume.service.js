@@ -1,5 +1,34 @@
 import resumeRepository from "./resume.repository.js";
 import supabaseStorage from "../../storage/supabaseStorage.js";
+import logger from "../../utils/logger.js";
+import { cancelResumeQueueJobs } from "../../queue/deletionCleanup.js";
+
+const PROCESSING_RESUME_STATUSES = new Set([
+  "UPLOADED",
+  "TEXT_EXTRACTED",
+  "STRUCTURED",
+  "SCORED",
+  "INSIGHTS_GENERATING",
+]);
+
+class ResumeDeletionServiceError extends Error {
+  constructor(message, statusCode, metadata = {}) {
+    super(message);
+    this.name = "ResumeDeletionServiceError";
+    this.statusCode = statusCode;
+    this.metadata = metadata;
+  }
+}
+
+const isStorageNotFoundError = (error) => {
+  const message = `${error?.message ?? ""} ${error?.cause?.message ?? ""}`.toLowerCase();
+  return (
+    message.includes("not found") ||
+    message.includes("not exist") ||
+    message.includes("no such") ||
+    message.includes("missing")
+  );
+};
 
 const createResume = async ({
   jobId,
@@ -87,6 +116,98 @@ const deleteResume = async (id) => {
   return resumeRepository.deleteResume(id);
 };
 
+const deleteResumeByOwner = async ({ resumeId, userId, confirm = false }) => {
+  const resume = await resumeRepository.getResumeDeletionContext(resumeId);
+
+  if (!resume) {
+    throw new ResumeDeletionServiceError("Resume not found", 404);
+  }
+
+  if (resume.job?.userId !== userId) {
+    throw new ResumeDeletionServiceError("Forbidden", 403);
+  }
+
+  if (!confirm && PROCESSING_RESUME_STATUSES.has(resume.status)) {
+    throw new ResumeDeletionServiceError(
+      "Resume is still processing. Retry with confirm=true to delete.",
+      409,
+      {
+        requiresConfirmation: true,
+        resumeStatus: resume.status,
+      },
+    );
+  }
+
+  const queueCleanup = await cancelResumeQueueJobs({
+    resumeId: resume.id,
+    userId,
+    jobId: resume.jobId,
+  });
+  const hadActiveQueueJob = queueCleanup.some((item) => item.wasActive);
+
+  if (hadActiveQueueJob) {
+    try {
+      await resumeRepository.updateLastProcessingFailure(resume.id, {
+        code: "RESUME_DELETION_CANCELLED",
+        retryable: false,
+        statusCode: null,
+        stage: "deletion",
+        message: "Resume deletion requested while queue job was active",
+        rawFailure: {
+          queueCleanup,
+        },
+        at: new Date().toISOString(),
+      });
+    } catch (error) {
+      logger.warn("resume_deletion_cancel_marker_failed", {
+        userId,
+        resumeId: resume.id,
+        jobId: resume.jobId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  try {
+    await supabaseStorage.removeResume(resume.storagePath);
+    logger.info("resume_storage_deleted", {
+      userId,
+      resumeId: resume.id,
+      jobId: resume.jobId,
+      storagePath: resume.storagePath,
+    });
+  } catch (error) {
+    if (!isStorageNotFoundError(error)) {
+      throw new ResumeDeletionServiceError("Failed to delete resume storage file", 502);
+    }
+
+    logger.info("resume_storage_deleted", {
+      userId,
+      resumeId: resume.id,
+      jobId: resume.jobId,
+      storagePath: resume.storagePath,
+      skipped: true,
+      reason: "already_missing",
+    });
+  }
+
+  const deleted = await resumeRepository.deleteResumeScoped({
+    id: resume.id,
+    userId,
+  });
+
+  logger.info("resume_deleted", {
+    userId,
+    resumeId: resume.id,
+    jobId: resume.jobId,
+    deleted,
+  });
+
+  return {
+    deleted,
+  };
+};
+
 const getResumesByJob = async (jobId, userId) => {
   return resumeRepository.getResumesByJob(jobId, userId);
 };
@@ -130,8 +251,12 @@ const resumeService = {
   completeInsightsGeneration,
   markInsightsFailed,
   deleteResume,
+  deleteResumeByOwner,
   getResumesByJob,
   getResumeSignedFileUrl,
+  PROCESSING_RESUME_STATUSES,
+  ResumeDeletionServiceError,
 };
 
 export default resumeService;
+export { PROCESSING_RESUME_STATUSES, ResumeDeletionServiceError };

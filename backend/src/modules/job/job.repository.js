@@ -49,6 +49,53 @@ const getJobOwnerContext = async (id) => {
   });
 };
 
+const getJobDeletionContext = async (id) => {
+  return prisma.job.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      userId: true,
+      status: true,
+    },
+  });
+};
+
+const getResumesForJob = async (jobId) => {
+  return prisma.resume.findMany({
+    where: { jobId },
+    select: {
+      id: true,
+      jobId: true,
+      storagePath: true,
+      status: true,
+    },
+  });
+};
+
+const deleteResumesByJobId = async ({ jobId, userId }) => {
+  const result = await prisma.resume.deleteMany({
+    where: {
+      jobId,
+      job: {
+        userId,
+      },
+    },
+  });
+
+  return result.count;
+};
+
+const deleteJobScoped = async ({ id, userId }) => {
+  const result = await prisma.job.deleteMany({
+    where: {
+      id,
+      userId,
+    },
+  });
+
+  return result.count > 0;
+};
+
 const updateStructuredRequirements = async (id, structuredRequirements, userId) => {
   return prisma.job.updateMany({
     where: buildUserScopedWhere({ id }, userId),
@@ -137,6 +184,10 @@ const jobRepository = {
   getJobsByUserId,
   getJobById,
   getJobOwnerContext,
+  getJobDeletionContext,
+  getResumesForJob,
+  deleteResumesByJobId,
+  deleteJobScoped,
   updateStructuredRequirements,
   updateStructuredRequirementsIfStatus,
   updateStatusIfCurrent,

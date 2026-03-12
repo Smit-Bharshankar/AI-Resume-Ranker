@@ -7,6 +7,8 @@ import { CandidateStageSelector } from "../workflow/CandidateStageSelector";
 type CandidateRowProps = {
   resume: Resume;
   onStageChange: (resumeId: string, stage: CandidateStage) => void;
+  onDelete?: (resume: Resume) => void;
+  isDeleting?: boolean;
   isStageUpdating?: boolean;
 };
 
@@ -27,6 +29,8 @@ const toRecommendationLabel = (resume: Resume): string => {
 export function CandidateRow({
   resume,
   onStageChange,
+  onDelete,
+  isDeleting = false,
   isStageUpdating = false,
 }: CandidateRowProps) {
   return (
@@ -49,9 +53,22 @@ export function CandidateRow({
         />
       </td>
       <td className="px-4 py-3 text-right">
-        <Link to={`/candidates/${resume.id}`}>
-          <Button variant="secondary">View Details</Button>
-        </Link>
+        <div className="flex justify-end gap-2">
+          <Link to={`/candidates/${resume.id}`}>
+            <Button variant="secondary">View Details</Button>
+          </Link>
+          {onDelete ? (
+            <Button
+              variant="danger"
+              disabled={isDeleting}
+              onClick={() => {
+                onDelete(resume);
+              }}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          ) : null}
+        </div>
       </td>
     </tr>
   );

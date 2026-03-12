@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAnalyticsEvents } from "../../analytics/events";
+import { ApiClientError } from "../../api/axiosClient";
 import { CandidateProfileHeader } from "../../components/candidates/CandidateProfileHeader";
 import { CandidateSkillsMatch } from "../../components/candidates/CandidateSkillsMatch";
 import { ErrorState } from "../../components/common/ErrorState";
@@ -12,9 +13,11 @@ import { InsightSummary } from "../../components/insights/InsightSummary";
 import { InsightWeaknesses } from "../../components/insights/InsightWeaknesses";
 import { ScoreBreakdown } from "../../components/scoring/ScoreBreakdown";
 import { ScoreDisplay } from "../../components/scoring/ScoreDisplay";
+import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { useJob } from "../../hooks/jobs/useJob";
 import { useCandidateResumeDetail } from "../../hooks/resumes/useCandidateResumeDetail";
+import { useDeleteResume } from "../../hooks/resumes/useDeleteResume";
 import { useUpdateCandidateStage } from "../../hooks/resumes/useUpdateCandidateStage";
 import { CandidateStage } from "../../types/resume";
 import {
@@ -30,9 +33,11 @@ const ResumeViewer = lazy(() =>
 
 export function CandidateDetailPage() {
   const { resumeId } = useParams<{ resumeId: string }>();
+  const navigate = useNavigate();
   const safeResumeId = resumeId ?? "";
 
   const resumeQuery = useCandidateResumeDetail(safeResumeId);
+  const deleteResumeMutation = useDeleteResume();
   const updateCandidateStageMutation = useUpdateCandidateStage();
   const resume = resumeQuery.data;
   const trackedResumeIds = useRef<Set<string>>(new Set());
@@ -68,6 +73,50 @@ export function CandidateDetailPage() {
       resumeId: resume.id,
       stage,
     });
+  };
+
+  const handleDeleteResume = async () => {
+    if (!resume) {
+      return;
+    }
+
+    const processingWarning = isResumeProcessingStatus(resume.status)
+      ? " This resume is still processing."
+      : "";
+    const firstConfirm = window.confirm(
+      `Delete this resume permanently?${processingWarning} This cannot be undone.`
+    );
+
+    if (!firstConfirm) {
+      return;
+    }
+
+    try {
+      await deleteResumeMutation.mutateAsync({
+        resumeId: resume.id,
+        jobId: resume.jobId,
+      });
+      void navigate(`/jobs/${resume.jobId}/candidates`);
+    } catch (error) {
+      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
+        return;
+      }
+
+      const forceConfirm = window.confirm(
+        "Resume is still processing. Delete anyway and cancel processing jobs?"
+      );
+
+      if (!forceConfirm) {
+        return;
+      }
+
+      await deleteResumeMutation.mutateAsync({
+        resumeId: resume.id,
+        jobId: resume.jobId,
+        confirm: true,
+      });
+      void navigate(`/jobs/${resume.jobId}/candidates`);
+    }
   };
 
   if (!resumeId) {
@@ -112,9 +161,20 @@ export function CandidateDetailPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900">Candidate Profile</h1>
-        <Link className="text-sm text-slate-600 underline" to={`/jobs/${resume.jobId}/candidates`}>
-          Back to Candidates
-        </Link>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="danger"
+            disabled={deleteResumeMutation.isPending}
+            onClick={() => {
+              void handleDeleteResume();
+            }}
+          >
+            {deleteResumeMutation.isPending ? "Deleting..." : "Delete Resume"}
+          </Button>
+          <Link className="text-sm text-slate-600 underline" to={`/jobs/${resume.jobId}/candidates`}>
+            Back to Candidates
+          </Link>
+        </div>
       </div>
 
       <CandidateProfileHeader

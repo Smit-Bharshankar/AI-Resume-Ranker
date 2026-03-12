@@ -12,6 +12,16 @@ export type ExtractRequirementsResponse = {
   message: string;
 };
 
+export type DeleteJobInput = {
+  jobId: string;
+  confirm?: boolean;
+};
+
+export type DeleteJobResponse = {
+  success: boolean;
+  message: string;
+};
+
 const request = async <T>(promise: Promise<AxiosResponse<unknown>>): Promise<T> => {
   return parseApiResponse<T>(await promise);
 };
@@ -91,5 +101,18 @@ export const updateRequirements = async (
 
   return request<Job>(
     axiosClient.patch<Job>(`/jobs/${jobId}/requirements`, payload)
+  );
+};
+
+export const deleteJob = async ({
+  jobId,
+  confirm = false,
+}: DeleteJobInput): Promise<DeleteJobResponse> => {
+  return request<DeleteJobResponse>(
+    axiosClient.delete<DeleteJobResponse>(`/jobs/${jobId}`, {
+      params: {
+        confirm,
+      },
+    })
   );
 };

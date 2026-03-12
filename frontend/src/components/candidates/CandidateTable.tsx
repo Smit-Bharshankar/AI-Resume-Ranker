@@ -6,12 +6,16 @@ import { CandidateRow } from "./CandidateRow";
 type CandidateTableProps = {
   resumes: Resume[];
   onStageChange: (resumeId: string, stage: CandidateStage) => void;
+  onDeleteResume?: (resume: Resume) => void;
+  deletingResumeId?: string;
   updatingResumeId?: string;
 };
 
 export function CandidateTable({
   resumes,
   onStageChange,
+  onDeleteResume,
+  deletingResumeId,
   updatingResumeId,
 }: CandidateTableProps) {
   if (resumes.length === 0) {
@@ -54,6 +58,8 @@ export function CandidateTable({
               key={resume.id}
               resume={resume}
               onStageChange={onStageChange}
+              onDelete={onDeleteResume}
+              isDeleting={deletingResumeId === resume.id}
               isStageUpdating={updatingResumeId === resume.id}
             />
           ))}

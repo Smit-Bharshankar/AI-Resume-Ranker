@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ApiClientError } from "../../api/axiosClient";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { CandidateTable } from "../../components/candidates/CandidateTable";
 import { UploadResumeDropzone } from "../../components/candidates/UploadResumeDropzone";
 import { Card } from "../../components/ui/Card";
+import { useDeleteResume } from "../../hooks/resumes/useDeleteResume";
 import { useUpdateCandidateStage } from "../../hooks/resumes/useUpdateCandidateStage";
 import { useResumes } from "../../hooks/resumes/useResumes";
 import { CandidateStage, Resume } from "../../types/resume";
@@ -13,7 +15,10 @@ import {
   CandidateStageFilter,
   getCandidateStageLabel,
 } from "../../utils/candidateStageUtils";
-import { shouldPollResumeStatus } from "../../utils/resumeStatusUtils";
+import {
+  isResumeProcessingStatus,
+  shouldPollResumeStatus,
+} from "../../utils/resumeStatusUtils";
 
 const sortByScoreDesc = (resumes: Resume[]): Resume[] => {
   return [...resumes].sort((a, b) => {
@@ -27,6 +32,7 @@ export function CandidatesListPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const safeJobId = jobId ?? "";
   const resumesQuery = useResumes(safeJobId);
+  const deleteResumeMutation = useDeleteResume();
   const updateCandidateStageMutation = useUpdateCandidateStage();
   const [selectedStageFilter, setSelectedStageFilter] =
     useState<CandidateStageFilter>("ALL");
@@ -50,6 +56,44 @@ export function CandidatesListPage() {
 
   const handleStageChange = (resumeId: string, stage: CandidateStage) => {
     updateCandidateStageMutation.mutate({ resumeId, stage });
+  };
+
+  const handleDeleteResume = async (resume: Resume) => {
+    const processingWarning = isResumeProcessingStatus(resume.status)
+      ? " This resume is still processing."
+      : "";
+    const firstConfirm = window.confirm(
+      `Delete this resume permanently?${processingWarning} This cannot be undone.`
+    );
+
+    if (!firstConfirm) {
+      return;
+    }
+
+    try {
+      await deleteResumeMutation.mutateAsync({
+        resumeId: resume.id,
+        jobId: resume.jobId,
+      });
+    } catch (error) {
+      if (!(error instanceof ApiClientError) || error.statusCode !== 409) {
+        return;
+      }
+
+      const forceConfirm = window.confirm(
+        "Resume is still processing. Delete anyway and cancel processing jobs?"
+      );
+
+      if (!forceConfirm) {
+        return;
+      }
+
+      await deleteResumeMutation.mutateAsync({
+        resumeId: resume.id,
+        jobId: resume.jobId,
+        confirm: true,
+      });
+    }
   };
 
   if (!jobId) {
@@ -140,6 +184,12 @@ export function CandidatesListPage() {
         <CandidateTable
           resumes={resumes}
           onStageChange={handleStageChange}
+          onDeleteResume={handleDeleteResume}
+          deletingResumeId={
+            deleteResumeMutation.isPending
+              ? deleteResumeMutation.variables?.resumeId
+              : undefined
+          }
           updatingResumeId={
             updateCandidateStageMutation.isPending
               ? updateCandidateStageMutation.variables?.resumeId
