@@ -24,7 +24,7 @@ function InsightSummaryComponent({
       hasContent={summary.length > 0}
       className={className}
     >
-      <p className="text-sm text-slate-700">{summary}</p>
+      <p className="text-sm text-muted-foreground">{summary}</p>
     </InsightSection>
   );
 }

@@ -26,7 +26,7 @@ function InsightWeaknessesComponent({
       hasContent={weaknesses.length > 0}
       className={className}
     >
-      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+      <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
         {weaknesses.map((weakness, index) => (
           <li key={`${weakness}-${index}`}>{weakness}</li>
         ))}

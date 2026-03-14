@@ -133,7 +133,7 @@ export function CandidateDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 pt-8 sm:px-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -161,7 +161,7 @@ export function CandidateDetailPage() {
       </Breadcrumb>
 
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Candidate Profile</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">Candidate Profile</h1>
         <div className="flex items-center gap-2">
           <DeleteConfirmButton
             disabled={deleteResumeMutation.isPending}
@@ -189,7 +189,7 @@ export function CandidateDetailPage() {
       />
 
       {isProcessing ? (
-        <Card>
+        <Card className="rounded-xl border-border/70">
           <Loader label="Candidate processing in progress. Refreshing every 2 seconds..." />
         </Card>
       ) : null}
@@ -225,7 +225,7 @@ export function CandidateDetailPage() {
         <div className="lg:col-span-3">
           <Suspense
             fallback={
-              <Card>
+              <Card className="rounded-xl border-border/70">
                 <Loader label="Loading resume viewer..." />
               </Card>
             }

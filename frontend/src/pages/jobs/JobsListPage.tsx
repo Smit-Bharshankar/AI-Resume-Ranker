@@ -24,7 +24,7 @@ export function JobsListPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 pt-8 sm:px-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -34,7 +34,12 @@ export function JobsListPage() {
       </Breadcrumb>
 
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Jobs</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Jobs</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage job descriptions, activate workflows, and track progress.
+          </p>
+        </div>
         <Link to="/jobs/create">
           <Button>Create Job</Button>
         </Link>

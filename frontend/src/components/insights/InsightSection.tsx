@@ -21,12 +21,12 @@ export function InsightSection({
   children,
 }: InsightSectionProps) {
   return (
-    <Card className={className}>
+    <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
       <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        <h3 className="text-lg font-semibold">{title}</h3>
         {isGenerating ? <Loader label={generatingLabel} /> : null}
         {!isGenerating && !hasContent ? (
-          <p className="text-sm text-slate-600">{emptyLabel}</p>
+          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
         ) : null}
         {!isGenerating && hasContent ? children : null}
       </div>

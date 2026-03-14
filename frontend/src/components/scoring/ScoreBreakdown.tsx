@@ -18,11 +18,11 @@ const toPercent = (value: number): string =>
 
 function BreakdownItem({ label, value }: BreakdownItemProps) {
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div className="rounded-md border border-border/70 bg-muted/30 p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 text-sm text-slate-800">{value}</p>
+      <p className="mt-1 text-sm text-foreground">{value}</p>
     </div>
   );
 }
@@ -34,10 +34,10 @@ function ScoreBreakdownComponent({
 }: ScoreBreakdownProps) {
   if (!scoreBreakdown) {
     return (
-      <Card className={className}>
+      <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold text-slate-900">Score Breakdown</h3>
-          <p className="text-sm text-slate-600">
+          <h3 className="text-lg font-semibold">Score Breakdown</h3>
+          <p className="text-sm text-muted-foreground">
             {isGenerating
               ? "Score breakdown is being generated and will appear automatically."
               : "Score breakdown will appear when candidate scoring is completed."}
@@ -57,9 +57,9 @@ function ScoreBreakdownComponent({
       : 0;
 
   return (
-    <Card className={className}>
+    <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
       <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-slate-900">Score Breakdown</h3>
+      <h3 className="text-lg font-semibold">Score Breakdown</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         <BreakdownItem
           label="Required Skills Score"

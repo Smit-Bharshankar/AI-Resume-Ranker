@@ -26,7 +26,7 @@ function InsightInterviewQuestionsComponent({
       hasContent={interviewQuestions.length > 0}
       className={className}
     >
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
+      <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
         {interviewQuestions.map((question, index) => (
           <li key={`${question}-${index}`}>{question}</li>
         ))}

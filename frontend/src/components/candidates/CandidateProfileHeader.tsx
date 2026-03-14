@@ -66,12 +66,12 @@ function CandidateProfileHeaderComponent({
     candidateName && candidateName.trim().length > 0 ? candidateName.trim() : candidateId;
 
   return (
-    <Card className={className}>
+    <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">{displayName}</h1>
-          <p className="text-xs text-slate-500">Candidate ID: {candidateId}</p>
-          <p className="text-sm text-slate-600">
+          <h1 className="text-2xl font-semibold tracking-tight">{displayName}</h1>
+          <p className="text-xs text-muted-foreground">Candidate ID: {candidateId}</p>
+          <p className="text-sm text-muted-foreground">
             {jobTitle && jobTitle.trim().length > 0 ? jobTitle : "Job title unavailable"}
           </p>
           <div className="flex flex-wrap items-center gap-2">
@@ -80,19 +80,19 @@ function CandidateProfileHeaderComponent({
           </div>
         </div>
 
-        <div className="grid gap-2 text-sm text-slate-700">
+        <div className="grid gap-2 text-sm text-muted-foreground">
           <p>
-            <span className="font-semibold text-slate-900">Score:</span>{" "}
+            <span className="font-semibold text-foreground">Score:</span>{" "}
             {typeof score === "number" ? `${Math.round(score)} / 100` : "-- / --"}
           </p>
           <p className="flex items-center gap-2">
-            <span className="font-semibold text-slate-900">Recommendation:</span>
+            <span className="font-semibold text-foreground">Recommendation:</span>
             <Badge variant={getRecommendationVariant(recommendation)}>
               {toRecommendationLabel(recommendation)}
             </Badge>
           </p>
           <p className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-slate-900">Stage:</span>
+            <span className="font-semibold text-foreground">Stage:</span>
             <CandidateStageBadge stage={stage} />
             {onStageChange ? (
               <CandidateStageSelector

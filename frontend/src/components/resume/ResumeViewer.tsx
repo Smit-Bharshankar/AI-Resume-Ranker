@@ -64,7 +64,7 @@ function ResumeViewerComponent({
 
   if (!resumeId) {
     return (
-      <Card className={className}>
+      <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
         <ErrorState
           title="Resume unavailable"
           message="Resume ID is missing. Cannot load preview."
@@ -75,10 +75,10 @@ function ResumeViewerComponent({
 
   if (!shouldLoad) {
     return (
-      <Card className={className}>
+      <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
-          <p className="text-sm text-slate-600">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <p className="text-sm text-muted-foreground">
             The PDF preview is lazy-loaded to improve page performance.
           </p>
           <Button onClick={handleLoadPreview}>Load Resume Preview</Button>
@@ -88,10 +88,10 @@ function ResumeViewerComponent({
   }
 
   return (
-    <Card className={className}>
+    <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
           {fileQuery.isFetching ? <Loader label="Refreshing secure link..." /> : null}
         </div>
 
@@ -114,9 +114,9 @@ function ResumeViewerComponent({
         ) : null}
 
         {!fileQuery.isLoading && !fileQuery.isError && fileQuery.data?.url ? (
-          <div className="relative min-h-[720px] overflow-hidden rounded-md border border-slate-200 bg-slate-50">
+          <div className="relative min-h-[720px] overflow-hidden rounded-lg border border-border/70 bg-muted/30">
             {!isFrameReady && !hasFrameError ? (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/70 backdrop-blur-sm">
                 <Loader label="Rendering PDF preview..." />
               </div>
             ) : null}

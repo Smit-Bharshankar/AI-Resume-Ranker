@@ -60,7 +60,7 @@ export function CreateJobPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="mx-auto max-w-4xl space-y-6 px-4 pt-8 sm:px-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -76,15 +76,20 @@ export function CreateJobPage() {
       </Breadcrumb>
 
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900">Create Job</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Create Job</h1>
+          <p className="text-sm text-muted-foreground">
+            Paste the role details and generate structured hiring requirements.
+          </p>
+        </div>
       </div>
 
-      <Card>
+      <Card className="rounded-xl">
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Title</label>
+            <label className="mb-1 block text-sm font-medium text-foreground">Title</label>
             <input
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+              className="w-full rounded-md border border-border/80 bg-accent px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20"
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               disabled={createMutation.isPending}
@@ -92,12 +97,12 @@ export function CreateJobPage() {
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1 block text-sm font-medium text-foreground">
               Raw Description
             </label>
             <textarea
               rows={10}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+              className="w-full rounded-md border border-border/80 bg-accent px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20"
               value={rawDescription}
               onChange={(event) => setRawDescription(event.target.value)}
               disabled={createMutation.isPending}

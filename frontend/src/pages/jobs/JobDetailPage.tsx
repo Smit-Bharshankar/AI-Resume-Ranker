@@ -26,6 +26,7 @@ import {
   isJobActive,
   isRequirementsStructured,
 } from "../../utils/statusUtils";
+import { Button } from "@/components/ui/Button";
 
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
@@ -120,7 +121,7 @@ export function JobDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 pt-8 sm:px-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -137,7 +138,7 @@ export function JobDetailPage() {
 
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-2xl font-bold text-slate-900">{job.title}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{job.title}</h1>
           <JobStatusBadge status={job.status} />
         </div>
         <div className="flex items-center gap-2">
@@ -152,21 +153,23 @@ export function JobDetailPage() {
       </div>
 
        {isJobActive(job.status) ? (
-        <Card>
+        <Card className="rounded-xl">
           <div className="space-y-3">
-            <p className="text-sm font-medium text-emerald-700">
+            <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
               This job is active and ready for candidate workflows.
             </p>
-            <Link className="text-sm text-slate-700 underline" to={`/jobs/${job.id}/candidates`}>
-              Open Candidates
-            </Link>
+            <Button asChild variant="secondary" size="sm">
+              <Link to={`/jobs/${job.id}/candidates`}>
+                Open Candidates
+              </Link>
+            </Button>
           </div>
         </Card>
       ) : null}
 
-      <Card className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-900">Raw Description</h2>
-        <p className="whitespace-pre-wrap text-sm text-slate-700">{job.rawDescription}</p>
+      <Card className="space-y-3 rounded-xl">
+        <h2 className="text-lg font-semibold">Raw Description</h2>
+        <p className="whitespace-pre-wrap text-sm text-muted-foreground">{job.rawDescription}</p>
       </Card>
 
       {isDraft(job.status) ? (

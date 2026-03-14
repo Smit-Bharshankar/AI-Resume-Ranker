@@ -81,7 +81,7 @@ export function CandidatesListPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-4 pt-8 sm:px-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -104,8 +104,8 @@ export function CandidatesListPage() {
 
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl font-bold text-slate-900">Candidates</h1>
-          <p className="text-sm text-slate-600">Job ID: {jobId}</p>
+          <h1 className="text-3xl font-semibold tracking-tight">Candidates</h1>
+          <p className="text-sm text-muted-foreground">Job ID: {jobId}</p>
         </div>
       </div>
 
@@ -129,12 +129,12 @@ export function CandidatesListPage() {
       ) : null}
 
       {hasActiveProcessing ? (
-        <Card>
+        <Card className="rounded-xl">
           <div className="flex items-center justify-between gap-3">
             <Loader label="Processing resumes. Refreshing list every 2 seconds..." />
             <button
               type="button"
-              className="text-sm text-slate-700 underline"
+              className="text-sm text-foreground underline"
               onClick={() => {
                 void resumesQuery.refetch();
               }}
@@ -145,9 +145,9 @@ export function CandidatesListPage() {
         </Card>
       ) : null}
 
-      <Card>
+      <Card className="rounded-xl">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-slate-900">Filter by stage:</span>
+          <span className="text-sm font-semibold">Filter by stage:</span>
           {CANDIDATE_STAGE_FILTERS.map((filterOption) => {
             const isActive = selectedStageFilter === filterOption;
             const label =
@@ -162,8 +162,8 @@ export function CandidatesListPage() {
                 }}
                 className={`rounded-full px-3 py-1.5 text-xs font-semibold tracking-wide transition ${
                   isActive
-                    ? "bg-slate-900 text-white"
-                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
                 }`}
               >
                 {label}

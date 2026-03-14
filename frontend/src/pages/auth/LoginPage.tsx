@@ -1,6 +1,10 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { ThemeToggle } from "../../components/ui/ThemeToggle";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
+import webDarkLogo from "../../../assests/web_dark_sq_ctn.svg";
+import webLightLogo from "../../../assests/web_light_sq_ctn.svg";
 
 const toUiError = (error: unknown): string => {
   if (error instanceof Error) {
@@ -21,6 +25,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, signInWithPassword, signInWithGoogle } = useAuth();
+  const { resolvedTheme } = useTheme();
   const redirectPath =
     typeof (location.state as { from?: unknown } | null)?.from === "string"
       ? (location.state as { from: string }).from
@@ -31,6 +36,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
+  const googleButtonSrc = resolvedTheme === "dark" ? webDarkLogo : webLightLogo;
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -66,66 +72,86 @@ export function LoginPage() {
   };
 
   return (
-    <div className="mx-auto mt-20 max-w-md space-y-6 rounded-md border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold text-slate-900">Login</h1>
-        <p className="text-sm text-slate-600">Sign in to continue to your jobs and candidates.</p>
+    <div className="relative min-h-screen bg-linear-to-b from-muted/40 to-background px-4 py-12">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
       </div>
 
-      {error ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
+      <div className="mx-auto mt-8 max-w-md space-y-6 rounded-xl border bg-card p-7 shadow-sm">
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            Welcome Back
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Sign in</h1>
+          <p className="text-sm text-muted-foreground">
+            Continue to your jobs and candidate pipeline.
+          </p>
         </div>
-      ) : null}
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-slate-700">Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-          />
-        </label>
+        {error ? (
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </div>
+        ) : null}
 
-        <label className="block space-y-1">
-          <span className="text-sm font-medium text-slate-700">Password</span>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-          />
-        </label>
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-foreground">Email</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="w-full rounded-md border border-border/80 bg-slate-100/70 px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-secondary/60"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium text-foreground">Password</span>
+            <input
+              type="password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="w-full rounded-md border border-border/80 bg-slate-100/70 px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-foreground/70 focus:border-ring focus:ring-2 focus:ring-ring/20 dark:bg-secondary/60"
+            />
+          </label>
+
+          <button
+            type="submit"
+            disabled={isSubmitting || isGoogleSubmitting}
+            className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? "Signing in..." : "Sign in with email"}
+          </button>
+        </form>
 
         <button
-          type="submit"
+          type="button"
+          onClick={handleGoogleSignIn}
           disabled={isSubmitting || isGoogleSubmitting}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          aria-label="Continue with Google"
+          className="w-full rounded-md transition disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {isSubmitting ? "Signing in..." : "Sign in with email"}
+          {/* {isGoogleSubmitting ? (
+            <span className="inline-block py-2 text-sm text-muted-foreground">Redirecting...</span>
+          ) : ( */}
+            <img
+              src={googleButtonSrc}
+              alt="Continue with Google"
+              className="h-10 w-full"
+            />
+          {/* )} */}
         </button>
-      </form>
 
-      <button
-        type="button"
-        onClick={handleGoogleSignIn}
-        disabled={isSubmitting || isGoogleSubmitting}
-        className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isGoogleSubmitting ? "Redirecting..." : "Continue with Google"}
-      </button>
-
-      <p className="text-sm text-slate-600">
-        Do not have an account?{" "}
-        <Link className="font-medium text-slate-900 underline" to="/signup">
-          Sign up
-        </Link>
-      </p>
+        <p className="text-sm text-muted-foreground">
+          Do not have an account?{" "}
+          <Link className="font-medium text-foreground underline" to="/signup">
+            Sign up
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

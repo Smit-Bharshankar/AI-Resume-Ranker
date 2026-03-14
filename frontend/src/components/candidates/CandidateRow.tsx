@@ -35,13 +35,13 @@ export function CandidateRow({
   isStageUpdating = false,
 }: CandidateRowProps) {
   return (
-    <tr className="border-t border-slate-200">
-      <td className="px-4 py-3 text-sm font-medium text-slate-900">{toDisplayName(resume)}</td>
+    <tr className="border-t border-border/70">
+      <td className="px-4 py-3 text-sm font-medium text-foreground">{toDisplayName(resume)}</td>
       <td className="px-4 py-3">
         <CandidateStatusBadge status={resume.status} />
       </td>
-      <td className="px-4 py-3 text-sm text-slate-700">{toScoreLabel(resume.score)}</td>
-      <td className="px-4 py-3 text-sm text-slate-700">{toRecommendationLabel(resume)}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">{toScoreLabel(resume.score)}</td>
+      <td className="px-4 py-3 text-sm text-muted-foreground">{toRecommendationLabel(resume)}</td>
       <td className="px-4 py-3">
         <CandidateStageSelector
           value={resume.stage}

@@ -25,35 +25,35 @@ function ScoreDisplayComponent({
   const progressPercent = Math.round((normalizedScore / safeMaxScore) * 100);
 
   return (
-    <Card className={className}>
+    <Card className={`rounded-xl border-border/70 ${className ?? ""}`.trim()}>
       <div className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {title}
         </p>
-        <p className="text-3xl font-bold text-slate-900">
+        <p className="text-3xl font-semibold tracking-tight text-foreground">
           {hasScore ? `${normalizedScore} / ${safeMaxScore}` : "-- / --"}
         </p>
         <div
-          className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
+          className="h-2 w-full overflow-hidden rounded-full bg-muted"
           aria-hidden="true"
         >
           <div
-            className="h-full rounded-full bg-slate-900 transition-all duration-500"
+            className="h-full rounded-full bg-primary transition-all duration-500"
             style={{ width: `${hasScore ? progressPercent : 0}%` }}
           />
         </div>
         {!hasScore && isGenerating ? (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Score is being generated. This section updates automatically.
           </p>
         ) : null}
         {!hasScore && !isGenerating ? (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             Score will appear after candidate scoring completes.
           </p>
         ) : null}
         {hasScore ? (
-          <p className="text-sm text-slate-600" aria-live="polite">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
             {progressPercent}% match score
           </p>
         ) : null}

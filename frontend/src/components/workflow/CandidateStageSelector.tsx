@@ -1,4 +1,5 @@
 import { ChangeEvent } from "react";
+import { cn } from "@/lib/utils";
 import { CandidateStage } from "../../types/resume";
 import {
   CANDIDATE_STAGES,
@@ -41,7 +42,12 @@ export function CandidateStageSelector({
       onChange={handleChange}
       disabled={disabled || isUpdating}
       aria-label={ariaLabel}
-      className={`h-9 min-w-40 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${className}`.trim()}
+      className={cn(
+        "h-9 min-w-40 rounded-md border border-border bg-accent px-3 text-sm text-foreground outline-none transition",
+        "focus:border-ring focus:ring-2 focus:ring-ring/20",
+        "disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground",
+        className
+      )}
     >
       {CANDIDATE_STAGES.map((stage) => (
         <option key={stage} value={stage}>
