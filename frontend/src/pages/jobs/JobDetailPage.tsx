@@ -159,7 +159,10 @@ export function JobDetailPage() {
               This job is active and ready for candidate workflows.
             </p>
             <Button asChild variant="secondary" size="sm">
-              <Link to={`/jobs/${job.id}/candidates`}>
+              <Link
+                to={`/jobs/${job.id}/candidates`}
+                state={{ jobTitle: job.title }}
+              >
                 Open Candidates
               </Link>
             </Button>

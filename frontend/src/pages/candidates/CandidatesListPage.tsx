@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { ErrorState } from "../../components/common/ErrorState";
 import { Loader } from "../../components/common/Loader";
 import { CandidateTable } from "../../components/candidates/CandidateTable";
@@ -35,6 +35,7 @@ const sortByScoreDesc = (resumes: Resume[]): Resume[] => {
 };
 
 export function CandidatesListPage() {
+  const location = useLocation();
   const { jobId } = useParams<{ jobId: string }>();
   const safeJobId = jobId ?? "";
   const resumesQuery = useResumes(safeJobId);
@@ -59,6 +60,9 @@ export function CandidatesListPage() {
   const hasActiveProcessing = useMemo(() => {
     return resumes.some((resume) => shouldPollResumeStatus(resume.status));
   }, [resumes]);
+  const jobTitleFromState =
+    (location.state as { jobTitle?: string } | null)?.jobTitle?.trim() ?? "";
+  const jobLabel = jobTitleFromState || "Selected job";
 
   const handleStageChange = (resumeId: string, stage: CandidateStage) => {
     updateCandidateStageMutation.mutate({ resumeId, stage });
@@ -105,7 +109,7 @@ export function CandidatesListPage() {
       <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-3xl font-semibold tracking-tight">Candidates</h1>
-          <p className="text-sm text-muted-foreground">Job ID: {jobId}</p>
+          <p className="text-sm text-muted-foreground">Job: {jobLabel}</p>
         </div>
       </div>
 

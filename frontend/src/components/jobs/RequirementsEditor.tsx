@@ -97,55 +97,65 @@ export function RequirementsEditor({
   };
 
   return (
-    <Card className="space-y-4">
-      <h2 className="text-lg font-semibold text-slate-900">Structured Requirements</h2>
+    <Card className="space-y-4 rounded-xl border-border/70">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold">Structured Requirements</h2>
+        <p className="text-sm text-muted-foreground">
+          Review and refine extracted requirements before activating this job.
+        </p>
+      </div>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
+          <label className="mb-1 block text-sm font-medium text-foreground">
             Required Skills (comma-separated)
           </label>
           <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground placeholder:font-mono outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
             value={requiredSkills}
             onChange={(event) => setRequiredSkills(event.target.value)}
+            placeholder="e.g. React, TypeScript, REST APIs"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
+          <label className="mb-1 block text-sm font-medium text-foreground">
             Preferred Skills (comma-separated)
           </label>
           <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground placeholder:font-mono outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
             value={preferredSkills}
             onChange={(event) => setPreferredSkills(event.target.value)}
+            placeholder="e.g. AWS, CI/CD, GraphQL"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
+          <label className="mb-1 block text-sm font-medium text-foreground">
             Mandatory Keywords (comma-separated)
           </label>
           <input
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground placeholder:font-mono outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
             value={mandatoryKeywords}
             onChange={(event) => setMandatoryKeywords(event.target.value)}
+            placeholder="e.g. frontend, optimization, testing"
           />
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">
+          <label className="mb-1 block text-sm font-medium text-foreground">
             Minimum Experience (years)
           </label>
           <input
             type="number"
             min={0}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            max={60}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground placeholder:font-mono outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
             value={minimumExperienceYears}
             onChange={(event) => setMinimumExperienceYears(event.target.value)}
+            placeholder="e.g. 2 years (defaults to 0)"
           />
           {validationErrors.minimumExperienceYears ? (
-            <p className="mt-1 text-xs text-red-700">
+            <p className="mt-1 text-xs text-destructive">
               {validationErrors.minimumExperienceYears}
             </p>
           ) : null}
