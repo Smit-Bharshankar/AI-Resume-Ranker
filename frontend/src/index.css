@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+  font-family: "Dream Avenue";
+  src:
+    url("../assests/fonts/Dream Avenue.woff2") format("woff2"),
+    url("../assests/fonts/Dream Avenue.woff") format("woff"),
+    url("../assests/fonts/Dream Avenue.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -50,6 +61,22 @@
   --ring: oklch(0.708 0 0);
 }
 
+/* Optional light-mode preset for a softer warm canvas */
+.theme-soft-light {
+  --background: oklch(0.99 0.006 95);
+  --foreground: oklch(0.2 0.01 95);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.01 95);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.01 95);
+  --muted: oklch(0.96 0.01 95);
+  --muted-foreground: oklch(0.48 0.02 95);
+  --accent: oklch(0.96 0.01 95);
+  --accent-foreground: oklch(0.2 0.01 95);
+  --border: oklch(0.9 0.01 95);
+  --input: oklch(0.9 0.01 95);
+}
+
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -79,4 +106,8 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+}
+
+.font-dream-avenue {
+  font-family: "Dream Avenue", "Times New Roman", serif;
 }

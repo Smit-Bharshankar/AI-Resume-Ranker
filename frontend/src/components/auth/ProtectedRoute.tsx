@@ -33,9 +33,9 @@ export function ProtectedRoute({ children }: PropsWithChildren) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link
             to="/jobs"
-            className="text-base font-semibold tracking-widest text-foreground"
+            className="font-dream-avenue px-2 py-1 rounded-2xl bg-[#f6e9cf] dark:bg-[#222222] dark:text-[#f6e9cf] text-3xl leading-none tracking-wide text-foreground"
           >
-            SORTRES
+            Sortres
           </Link>
 
           <nav className="hidden items-center gap-2 sm:flex">
