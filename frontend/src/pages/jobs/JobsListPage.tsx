@@ -49,15 +49,15 @@ export function JobsListPage() {
       </div>
 
       {usageQuery.isSuccess ? (
-  <div className="p-5 bg-card border border-border rounded-xl space-y-5 shadow-sm">
-    <div className="flex items-center justify-between">
-      <h3 className="text-sm font-semibold text-foreground tracking-tight">Account Usage</h3>
-      <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-secondary text-secondary-foreground rounded-full border border-border">
-        Free Tier
-      </span>
-    </div>
+        <Card className="space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-foreground tracking-tight">Account Usage</h3>
+            <span className="px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-secondary text-secondary-foreground rounded-full border border-border">
+              Free Tier
+            </span>
+          </div>
 
-    <div className="space-y-6">
+          <div className="space-y-6">
       {/* Active Jobs Section */}
       <div className="space-y-2">
         <div className="flex justify-between items-end">
@@ -85,7 +85,7 @@ export function JobsListPage() {
       {/* Lifetime Resumes Section */}
       <div className="space-y-2">
         <div className="flex justify-between items-end">
-          <span className="text-xs text-muted-foreground font-medium">Lifetime Capacity</span>
+          <span className="text-xs text-muted-foreground font-medium">Monthly Capacity</span>
           <span className="text-xs font-mono font-semibold text-foreground">
             {usageQuery.data.resumes.completedCount + usageQuery.data.resumes.inFlightCount} 
             <span className="text-muted-foreground"> / {usageQuery.data.resumes.lifetimeLimit}</span>
@@ -114,8 +114,8 @@ export function JobsListPage() {
         </div>
       </div>
     </div>
-  </div>
-) : null}
+        </Card>
+      ) : null}
 
       {jobsQuery.isLoading ? <Loader label="Loading jobs..." /> : null}
 
