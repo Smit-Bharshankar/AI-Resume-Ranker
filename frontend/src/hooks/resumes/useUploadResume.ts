@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { uploadResumes, UploadResumesResult } from "../../api/resumesApi";
 import { resumeQueryKeys } from "./useResumes";
+import { usageQueryKeys } from "../users/useUsage";
 
 type UploadResumeVariables = {
   jobId: string;
@@ -34,6 +35,9 @@ export const useUploadResume = (): UseUploadResumeResult => {
       setUploadProgress(100);
       await queryClient.invalidateQueries({
         queryKey: resumeQueryKeys.byJob(variables.jobId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: usageQueryKeys.me(),
       });
     },
     onError: () => {

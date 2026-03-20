@@ -26,7 +26,11 @@ export function JobCard({ job, onDelete, isDeleting = false }: JobCardProps) {
         <div className="space-y-1">
           <CardTitle className="text-xl">{job.title}</CardTitle>
           <CardDescription>
-            {job.createdAt ? `Created ${new Date(job.createdAt).toLocaleDateString()}` : "Job pipeline"}
+            {job.createdAt ? `Created: ${new Date(job.createdAt).toLocaleDateString('en-US', {
+              month: 'short',
+              day: '2-digit',
+              year: 'numeric'
+            }).replace(/ /g, '/')}` : "Job pipeline"}
           </CardDescription>
         </div>
         <JobStatusBadge status={job.status} />

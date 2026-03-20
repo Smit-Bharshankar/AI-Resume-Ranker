@@ -62,9 +62,12 @@ model Job {
 }
 
 model User {
-  id        String   @id @db.Uuid
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id                    String   @id @db.Uuid
+  email                 String   @unique
+  jobsCreatedCount      Int      @default(0)
+  resumesCompletedCount Int      @default(0)
+  resumeInFlightCount   Int      @default(0)
+  createdAt             DateTime @default(now())
 
   jobs Job[]
 }
@@ -81,6 +84,7 @@ model Resume {
   stage          CandidateStage @default(NEW)
   score          Float?
   scoreBreakdown Json?
+  quotaReservationActive Boolean @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

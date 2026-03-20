@@ -1,4 +1,4 @@
-import uploadService from "./upload.service.js";
+import uploadService, { UploadServiceError } from "./upload.service.js";
 import { successResponse, errorResponse } from "../../utils/api-response.js";
 import { handleControllerError } from "../../utils/error-handler.js";
 
@@ -26,8 +26,8 @@ const uploadResumes = async (req, res) => {
 
     return res.status(200).json(successResponse(result));
   } catch (error) {
-    if (error.statusCode === 404) {
-      return res.status(404).json(errorResponse("Job not found"));
+    if (error instanceof UploadServiceError) {
+      return res.status(error.statusCode).json(errorResponse(error.message));
     }
 
     return handleControllerError(res, error, "Failed to upload resumes");

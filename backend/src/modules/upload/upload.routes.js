@@ -2,9 +2,10 @@ import { Router } from "express";
 import multer from "multer";
 import uploadController from "./upload.controller.js";
 import { errorResponse } from "../../utils/api-response.js";
+import env from "../../config/env.js";
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_FILES = 30;
+const MAX_FILE_SIZE_BYTES = env.uploadMaxFileSizeBytes;
+const MAX_FILES = env.freeTierMaxResumesPerJob;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -38,7 +39,7 @@ const uploadMiddleware = (req, res, next) => {
       if (error.code === "LIMIT_FILE_COUNT") {
         return res
           .status(400)
-          .json(errorResponse("Maximum 30 files are allowed per upload"));
+          .json(errorResponse(`Maximum ${MAX_FILES} files are allowed per upload`));
       }
 
       return res.status(400).json(errorResponse("Only PDF files are allowed"));

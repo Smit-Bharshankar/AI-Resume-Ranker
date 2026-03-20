@@ -3,6 +3,7 @@ import express from "express";
 import env from "./config/env.js";
 import jobRoutes from "./modules/job/job.routes.js";
 import resumeRoutes from "./modules/resume/resume.routes.js";
+import userRoutes from "./modules/user/user.routes.js";
 import { bullBoardBasePath, bullBoardRouter } from "./queue/bullBoard.js";
 import { errorResponse } from "./utils/api-response.js";
 import logger from "./utils/logger.js";
@@ -54,6 +55,7 @@ app.get("/health", (req, res) => {
 
 app.use("/jobs", jobRoutes);
 app.use("/resumes", resumeRoutes);
+app.use("/users", userRoutes);
 app.use(bullBoardBasePath, bullBoardRouter);
 app.use(sentryErrorHandler);
 

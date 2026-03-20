@@ -7,6 +7,7 @@ import {
 import { ApiClientError } from "../../api/axiosClient";
 import { resumeQueryKeys } from "./useResumes";
 import { toast } from "sonner";
+import { usageQueryKeys } from "../users/useUsage";
 
 const mapDeleteResumeErrorMessage = (error: Error): string => {
   if (!(error instanceof ApiClientError)) {
@@ -44,6 +45,9 @@ export const useDeleteResume = () => {
         }),
         queryClient.invalidateQueries({
           queryKey: resumeQueryKeys.detail(variables.resumeId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: usageQueryKeys.me(),
         }),
       ]);
 

@@ -116,6 +116,14 @@ const deleteResume = async (id) => {
   return resumeRepository.deleteResume(id);
 };
 
+const releaseReservationByOwner = async ({ resumeId, userId }) => {
+  return resumeRepository.releaseReservationByOwner({ id: resumeId, userId });
+};
+
+const releaseReservationsByJob = async ({ jobId, userId }) => {
+  return resumeRepository.releaseReservationsByJob({ jobId, userId });
+};
+
 const deleteResumeByOwner = async ({ resumeId, userId, confirm = false }) => {
   const resume = await resumeRepository.getResumeDeletionContext(resumeId);
 
@@ -212,6 +220,10 @@ const getResumesByJob = async (jobId, userId) => {
   return resumeRepository.getResumesByJob(jobId, userId);
 };
 
+const countResumesByJob = async (jobId, userId) => {
+  return resumeRepository.countResumesByJob(jobId, userId);
+};
+
 const getResumeSignedFileUrl = async ({
   resumeId,
   userId,
@@ -251,8 +263,11 @@ const resumeService = {
   completeInsightsGeneration,
   markInsightsFailed,
   deleteResume,
+  releaseReservationByOwner,
+  releaseReservationsByJob,
   deleteResumeByOwner,
   getResumesByJob,
+  countResumesByJob,
   getResumeSignedFileUrl,
   PROCESSING_RESUME_STATUSES,
   ResumeDeletionServiceError,

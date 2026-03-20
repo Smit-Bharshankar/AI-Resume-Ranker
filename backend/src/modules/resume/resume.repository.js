@@ -70,6 +70,53 @@ const withJobUserScope = (where, userId) => {
   };
 };
 
+const decrementUserInFlightCount = async (tx, userId, amount) => {
+  if (!userId || amount <= 0) {
+    return;
+  }
+
+  await tx.$executeRaw`
+    UPDATE "User"
+    SET "resumeInFlightCount" = GREATEST("resumeInFlightCount" - ${amount}, 0)
+    WHERE "id" = CAST(${userId} AS UUID)
+  `;
+};
+
+const releaseReservationForResume = async ({ tx, resumeId, userId }) => {
+  const scopedResume = await tx.resume.findFirst({
+    where: withJobUserScope({ id: resumeId, quotaReservationActive: true }, userId),
+    select: {
+      id: true,
+      job: {
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
+
+  if (!scopedResume?.job?.userId) {
+    return false;
+  }
+
+  const updated = await tx.resume.updateMany({
+    where: {
+      id: scopedResume.id,
+      quotaReservationActive: true,
+    },
+    data: {
+      quotaReservationActive: false,
+    },
+  });
+
+  if (updated.count === 0) {
+    return false;
+  }
+
+  await decrementUserInFlightCount(tx, scopedResume.job.userId, 1);
+  return true;
+};
+
 const createResume = async ({
   jobId,
   storagePath,
@@ -91,6 +138,7 @@ const createResume = async ({
       status,
       score,
       scoreBreakdown,
+      quotaReservationActive: true,
     },
   });
 };
@@ -167,6 +215,7 @@ const getResumeDeletionContext = async (id) => {
       jobId: true,
       storagePath: true,
       status: true,
+      quotaReservationActive: true,
       job: {
         select: {
           userId: true,
@@ -198,20 +247,24 @@ const markExtractionFailed = async (id, failure = null) => {
     code: "RESUME_TEXT_EXTRACTION_FAILED",
     message: "Resume text extraction failed",
   });
-  const result = await prisma.resume.updateMany({
-    where: {
-      id,
-      status: {
-        in: ["UPLOADED", "FAILED_EXTRACTION"],
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.resume.updateMany({
+      where: {
+        id,
+        status: "UPLOADED",
       },
-    },
-    data: {
-      status: "FAILED_EXTRACTION",
-      lastProcessingFailure: failureRecord,
-    },
-  });
+      data: {
+        status: "FAILED_EXTRACTION",
+        lastProcessingFailure: failureRecord,
+      },
+    });
 
-  return result.count > 0;
+    if (result.count > 0) {
+      await releaseReservationForResume({ tx, resumeId: id });
+    }
+
+    return result.count > 0;
+  });
 };
 
 const completeStructureExtraction = async ({ id, structuredData }) => {
@@ -236,20 +289,24 @@ const markStructureFailed = async (id, failure = null) => {
     code: "RESUME_STRUCTURING_FAILED",
     message: "Resume structuring failed",
   });
-  const result = await prisma.resume.updateMany({
-    where: {
-      id,
-      status: {
-        in: ["TEXT_EXTRACTED", "FAILED_STRUCTURE"],
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.resume.updateMany({
+      where: {
+        id,
+        status: "TEXT_EXTRACTED",
       },
-    },
-    data: {
-      status: "FAILED_STRUCTURE",
-      lastProcessingFailure: failureRecord,
-    },
-  });
+      data: {
+        status: "FAILED_STRUCTURE",
+        lastProcessingFailure: failureRecord,
+      },
+    });
 
-  return result.count > 0;
+    if (result.count > 0) {
+      await releaseReservationForResume({ tx, resumeId: id });
+    }
+
+    return result.count > 0;
+  });
 };
 
 const completeScoring = async ({ id, score, scoreBreakdown }) => {
@@ -275,20 +332,24 @@ const markScoringFailed = async (id, failure = null) => {
     code: "RESUME_SCORING_FAILED",
     message: "Resume scoring failed",
   });
-  const result = await prisma.resume.updateMany({
-    where: {
-      id,
-      status: {
-        in: ["STRUCTURED", "FAILED_SCORING"],
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.resume.updateMany({
+      where: {
+        id,
+        status: "STRUCTURED",
       },
-    },
-    data: {
-      status: "FAILED_SCORING",
-      lastProcessingFailure: failureRecord,
-    },
-  });
+      data: {
+        status: "FAILED_SCORING",
+        lastProcessingFailure: failureRecord,
+      },
+    });
 
-  return result.count > 0;
+    if (result.count > 0) {
+      await releaseReservationForResume({ tx, resumeId: id });
+    }
+
+    return result.count > 0;
+  });
 };
 
 const startInsightsGeneration = async (id) => {
@@ -306,19 +367,62 @@ const startInsightsGeneration = async (id) => {
 };
 
 const completeInsightsGeneration = async ({ id, insights }) => {
-  const result = await prisma.resume.updateMany({
-    where: {
-      id,
-      status: "INSIGHTS_GENERATING",
-    },
-    data: {
-      insights,
-      status: "INSIGHTS_GENERATED",
-      lastProcessingFailure: null,
-    },
-  });
+  return prisma.$transaction(async (tx) => {
+    const resumeContext = await tx.resume.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        job: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
 
-  return result.count > 0;
+    if (!resumeContext?.job?.userId) {
+      return false;
+    }
+
+    const reservedResult = await tx.resume.updateMany({
+      where: {
+        id,
+        status: "INSIGHTS_GENERATING",
+        quotaReservationActive: true,
+      },
+      data: {
+        insights,
+        status: "INSIGHTS_GENERATED",
+        lastProcessingFailure: null,
+        quotaReservationActive: false,
+      },
+    });
+
+    if (reservedResult.count > 0) {
+      await tx.$executeRaw`
+        UPDATE "User"
+        SET
+          "resumesCompletedCount" = "resumesCompletedCount" + 1,
+          "resumeInFlightCount" = GREATEST("resumeInFlightCount" - 1, 0)
+        WHERE "id" = CAST(${resumeContext.job.userId} AS UUID)
+      `;
+      return true;
+    }
+
+    const fallbackResult = await tx.resume.updateMany({
+      where: {
+        id,
+        status: "INSIGHTS_GENERATING",
+      },
+      data: {
+        insights,
+        status: "INSIGHTS_GENERATED",
+        lastProcessingFailure: null,
+      },
+    });
+
+    return fallbackResult.count > 0;
+  });
 };
 
 const markInsightsFailed = async (id, failure = null) => {
@@ -327,39 +431,89 @@ const markInsightsFailed = async (id, failure = null) => {
     code: "RESUME_INSIGHTS_FAILED",
     message: "Resume insights generation failed",
   });
-  const result = await prisma.resume.updateMany({
-    where: {
-      id,
-      status: {
-        in: ["SCORED", "INSIGHTS_GENERATING", "FAILED_INSIGHTS"],
+  return prisma.$transaction(async (tx) => {
+    const result = await tx.resume.updateMany({
+      where: {
+        id,
+        status: {
+          in: ["SCORED", "INSIGHTS_GENERATING"],
+        },
       },
-    },
-    data: {
-      status: "FAILED_INSIGHTS",
-      lastProcessingFailure: failureRecord,
-    },
-  });
+      data: {
+        status: "FAILED_INSIGHTS",
+        lastProcessingFailure: failureRecord,
+      },
+    });
 
-  return result.count > 0;
+    if (result.count > 0) {
+      await releaseReservationForResume({ tx, resumeId: id });
+    }
+
+    return result.count > 0;
+  });
 };
 
 const deleteResume = async (id) => {
-  return prisma.resume.delete({
-    where: { id },
+  return prisma.$transaction(async (tx) => {
+    await releaseReservationForResume({ tx, resumeId: id });
+
+    return tx.resume.delete({
+      where: { id },
+    });
   });
 };
 
 const deleteResumeScoped = async ({ id, userId }) => {
-  const result = await prisma.resume.deleteMany({
-    where: {
-      id,
-      job: {
-        userId,
-      },
-    },
-  });
+  return prisma.$transaction(async (tx) => {
+    await releaseReservationForResume({ tx, resumeId: id, userId });
 
-  return result.count > 0;
+    const result = await tx.resume.deleteMany({
+      where: {
+        id,
+        job: {
+          userId,
+        },
+      },
+    });
+
+    return result.count > 0;
+  });
+};
+
+const releaseReservationByOwner = async ({ id, userId }) => {
+  return prisma.$transaction(async (tx) => {
+    return releaseReservationForResume({ tx, resumeId: id, userId });
+  });
+};
+
+const releaseReservationsByJob = async ({ jobId, userId }) => {
+  return prisma.$transaction(async (tx) => {
+    const reservedResumes = await tx.resume.findMany({
+      where: withJobUserScope({ jobId, quotaReservationActive: true }, userId),
+      select: { id: true },
+    });
+
+    const reservedCount = reservedResumes.length;
+    if (reservedCount === 0) {
+      return 0;
+    }
+
+    await tx.resume.updateMany({
+      where: withJobUserScope({ jobId, quotaReservationActive: true }, userId),
+      data: {
+        quotaReservationActive: false,
+      },
+    });
+
+    await decrementUserInFlightCount(tx, userId, reservedCount);
+    return reservedCount;
+  });
+};
+
+const countResumesByJob = async (jobId, userId) => {
+  return prisma.resume.count({
+    where: withJobUserScope({ jobId }, userId),
+  });
 };
 
 const getResumesByJob = async (jobId, userId) => {
@@ -398,6 +552,9 @@ const resumeRepository = {
   markInsightsFailed,
   deleteResume,
   deleteResumeScoped,
+  releaseReservationByOwner,
+  releaseReservationsByJob,
+  countResumesByJob,
   getResumesByJob,
 };
 

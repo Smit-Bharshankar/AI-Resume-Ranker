@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { useAnalyticsEvents } from "../../analytics/events";
 import { createJob } from "../../api/jobsApi";
@@ -16,9 +16,11 @@ import {
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Job } from "../../types/job";
+import { usageQueryKeys } from "../../hooks/users/useUsage";
 
 export function CreateJobPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { trackJobCreated } = useAnalyticsEvents();
   const [title, setTitle] = useState<string>("");
   const [rawDescription, setRawDescription] = useState<string>("");
@@ -29,6 +31,7 @@ export function CreateJobPage() {
       mutationFn: ({ title: inputTitle, rawDescription: inputRawDescription }) =>
         createJob({ title: inputTitle, rawDescription: inputRawDescription }),
       onSuccess: (createdJob) => {
+        void queryClient.invalidateQueries({ queryKey: usageQueryKeys.me() });
         trackJobCreated(createdJob.id);
         navigate(`/jobs/${createdJob.id}`);
       },

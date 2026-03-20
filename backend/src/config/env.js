@@ -28,7 +28,7 @@ const resolveAiProvider = () => {
 };
 
 const aiProvider = resolveAiProvider();
-const defaultAiModel = aiProvider === "openai" ? "gpt-4o-mini" : "gemini-2.5-flash-lite";
+const defaultAiModel = aiProvider === "openai" ? "gpt-4o-mini" : "gemini-3.1-flash-lite-preview";
 
 const env = {
   nodeEnv: process.env.NODE_ENV ?? "development",
@@ -161,6 +161,11 @@ const env = {
     process.env.AI_EXTRACTION_RETRY_BASE_DELAY_MS,
     500,
   ),
+  freeTierMaxJobsPerUser: toNumber(process.env.FREE_TIER_MAX_JOBS_PER_USER, 5),
+  freeTierMaxResumesPerJob: toNumber(process.env.FREE_TIER_MAX_RESUMES_PER_JOB, 30),
+  freeTierMaxResumesPerUser: toNumber(process.env.FREE_TIER_MAX_RESUMES_PER_USER, 100),
+  uploadMaxFileSizeBytes: toNumber(process.env.UPLOAD_MAX_FILE_SIZE_BYTES, 5 * 1024 * 1024),
+  uploadMaxPdfPages: toNumber(process.env.UPLOAD_MAX_PDF_PAGES, 5),
 };
 
 export default env;

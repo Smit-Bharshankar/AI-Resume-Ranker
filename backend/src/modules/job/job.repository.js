@@ -12,15 +12,28 @@ const buildUserScopedWhere = (baseWhere, userId) => {
 };
 
 const createJob = async ({ userId, title, rawDescription }) => {
-  return prisma.job.create({
-    data: {
-      userId,
-      title,
-      rawDescription,
-      structuredRequirements: null,
-      lastProcessingFailure: null,
-      status: "DRAFT",
-    },
+  return prisma.$transaction(async (tx) => {
+    const createdJob = await tx.job.create({
+      data: {
+        userId,
+        title,
+        rawDescription,
+        structuredRequirements: null,
+        lastProcessingFailure: null,
+        status: "DRAFT",
+      },
+    });
+
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        jobsCreatedCount: {
+          increment: 1,
+        },
+      },
+    });
+
+    return createdJob;
   });
 };
 
@@ -30,6 +43,12 @@ const getJobsByUserId = async (userId) => {
     orderBy: {
       createdAt: "desc",
     },
+  });
+};
+
+const countJobsByUserId = async (userId) => {
+  return prisma.job.count({
+    where: { userId },
   });
 };
 
@@ -182,6 +201,7 @@ const markRequirementsExtractionFailed = async ({
 const jobRepository = {
   createJob,
   getJobsByUserId,
+  countJobsByUserId,
   getJobById,
   getJobOwnerContext,
   getJobDeletionContext,

@@ -16,9 +16,10 @@ const removeQueueJobById = async ({
   let state = null;
   let existed = false;
   let wasActive = false;
+  let existing = null;
 
   try {
-    const existing = await queue.getJob(jobId);
+    existing = await queue.getJob(jobId);
     if (existing) {
       existed = true;
       state = await existing.getState();
@@ -44,7 +45,9 @@ const removeQueueJobById = async ({
   }
 
   try {
-    await queue.removeJobs(jobId);
+    if (existing) {
+      await existing.remove();
+    }
   } catch (error) {
     logger.warn("queue_jobs_cancelled_remove_failed", {
       queue: queueName,

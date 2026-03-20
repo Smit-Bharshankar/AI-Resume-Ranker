@@ -1,4 +1,7 @@
-import jobService, { JobDeletionServiceError } from "./job.service.js";
+import jobService, {
+  JobDeletionServiceError,
+  JobLimitServiceError,
+} from "./job.service.js";
 import resumeService from "../resume/resume.service.js";
 import { successResponse, errorResponse } from "../../utils/api-response.js";
 import { handleControllerError } from "../../utils/error-handler.js";
@@ -53,6 +56,10 @@ const createJob = async (req, res) => {
 
     return res.status(201).json(successResponse(job));
   } catch (error) {
+    if (error instanceof JobLimitServiceError) {
+      return res.status(error.statusCode).json(errorResponse(error.message));
+    }
+
     return handleControllerError(res, error, "Failed to create job");
   }
 };

@@ -4,6 +4,7 @@ import { resumeQueryKeys } from "../resumes/useResumes";
 import { jobQueryKeys } from "./useJobs";
 import { ApiClientError } from "../../api/axiosClient";
 import { toast } from "sonner";
+import { usageQueryKeys } from "../users/useUsage";
 
 const mapDeleteJobErrorMessage = (error: Error): string => {
   if (!(error instanceof ApiClientError)) {
@@ -35,6 +36,7 @@ export const useDeleteJob = () => {
         queryClient.invalidateQueries({ queryKey: jobQueryKeys.list() }),
         queryClient.invalidateQueries({ queryKey: jobQueryKeys.detail(variables.jobId) }),
         queryClient.invalidateQueries({ queryKey: resumeQueryKeys.all }),
+        queryClient.invalidateQueries({ queryKey: usageQueryKeys.me() }),
       ]);
 
       toast.success(result.message || "Job deleted successfully.");

@@ -2,6 +2,8 @@ import jobRepository from "./job.repository.js";
 import logger from "../../utils/logger.js";
 import supabaseStorage from "../../storage/supabaseStorage.js";
 import { PROCESSING_RESUME_STATUSES } from "../resume/resume.service.js";
+import resumeService from "../resume/resume.service.js";
+import env from "../../config/env.js";
 import {
   cancelJobExtractionQueueJob,
   cancelResumeQueueJobs,
@@ -16,6 +18,14 @@ class JobDeletionServiceError extends Error {
   }
 }
 
+class JobLimitServiceError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.name = "JobLimitServiceError";
+    this.statusCode = statusCode;
+  }
+}
+
 const isStorageNotFoundError = (error) => {
   const message = `${error?.message ?? ""} ${error?.cause?.message ?? ""}`.toLowerCase();
   return (
@@ -27,6 +37,14 @@ const isStorageNotFoundError = (error) => {
 };
 
 const createJob = async ({ userId, title, rawDescription }) => {
+  const currentJobsCount = await jobRepository.countJobsByUserId(userId);
+  if (currentJobsCount >= env.freeTierMaxJobsPerUser) {
+    throw new JobLimitServiceError(
+      `Free tier limit reached (${env.freeTierMaxJobsPerUser} jobs). Upgrade to continue.`,
+      409,
+    );
+  }
+
   return jobRepository.createJob({ userId, title, rawDescription });
 };
 
@@ -132,6 +150,8 @@ const deleteJobByOwner = async ({ jobId, userId, confirm = false }) => {
 
   await cancelJobExtractionQueueJob({ jobId, userId });
 
+  await resumeService.releaseReservationsByJob({ jobId, userId });
+
   const storagePaths = resumes
     .map((resume) => resume.storagePath)
     .filter((path) => typeof path === "string" && path.trim().length > 0);
@@ -205,7 +225,8 @@ const jobService = {
   markRequirementsExtractionFailed,
   deleteJobByOwner,
   JobDeletionServiceError,
+  JobLimitServiceError,
 };
 
 export default jobService;
-export { JobDeletionServiceError };
+export { JobDeletionServiceError, JobLimitServiceError };
