@@ -5,7 +5,7 @@ import PricingPage from "@/components/pricing-page";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Sortres pricing for recruiters and hiring teams. Start free, scale with Pro, and collaborate with Team plans.",
+    "Sortres beta pricing for recruiters and hiring teams. Free tier is available now, with Pro and Team plans coming soon.",
   alternates: {
     canonical: "/pricing",
   },

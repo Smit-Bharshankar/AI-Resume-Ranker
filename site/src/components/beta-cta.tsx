@@ -1,11 +1,18 @@
 ﻿"use client";
 
 import { motion } from "framer-motion";
+import { FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { APP_BASE_URL } from "@/lib/urls";
 
 export default function BetaCTA() {
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    window.location.href = APP_BASE_URL;
+  };
+
   return (
     <section className="px-6 md:px-10">
       <motion.div
@@ -22,7 +29,7 @@ export default function BetaCTA() {
           </p>
         </div>
 
-        <form className="grid gap-4">
+        <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="grid gap-2">
             <label htmlFor="email" className="text-sm font-medium">
               Email
@@ -47,11 +54,10 @@ export default function BetaCTA() {
           </div>
 
           <Button type="submit" size="lg" className="mt-2 w-full sm:w-fit">
-            Request Access
+            Continue to Free Beta
           </Button>
         </form>
       </motion.div>
     </section>
   );
 }
-

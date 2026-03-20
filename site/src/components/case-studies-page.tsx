@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_BASE_URL } from "@/lib/urls";
 
 const reveal = {
   hidden: { opacity: 0, y: 22 },
@@ -158,11 +159,11 @@ export default function CaseStudiesPage() {
         >
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">See how Sortres fits your hiring workflow</h2>
           <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-            Start with your next open role and evaluate candidates in a faster, more structured way.
+            Start with free beta access and evaluate candidates in a faster, more structured way.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/">Try Sortres</Link>
+              <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="/contact">Talk to Us</Link>

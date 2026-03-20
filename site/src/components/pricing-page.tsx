@@ -3,11 +3,13 @@
 import { motion } from "framer-motion";
 import { Check, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_BASE_URL } from "@/lib/urls";
 
 type Plan = {
   name: "Free" | "Pro" | "Team";
@@ -23,26 +25,26 @@ type Plan = {
 const plans: Plan[] = [
   {
     name: "Free",
-    subtitle: "For early validation and light hiring",
+    subtitle: "Available now during beta",
     price: "$0",
-    resumesPerMonth: "Up to 50 resumes / month",
+    featured: true,
+    resumesPerMonth: "Up to 100 resumes / month",
     support: "Community support",
     features: [
       "AI candidate scoring",
       "Candidate ranking for each role",
       "Basic recruiter insights",
-      "Single resume uploads",
-      "1 active job role at a time",
+      "3 resume bulk uploads",
+      "5 active job role at a time",
     ],
-    cta: "Start Free",
+    cta: "Try Free Beta",
   },
   {
     name: "Pro",
-    subtitle: "For active recruiters and growing teams",
-    price: "$19",
-    resumesPerMonth: "Up to 500 resumes / month",
+    subtitle: "For active recruiters and growing teams (coming soon)",
+    price: "$12",
+    resumesPerMonth: "Up to 1000 resumes / month",
     support: "Priority email support",
-    featured: true,
     features: [
       "Everything in Free",
       "Advanced recruiter insights",
@@ -51,12 +53,12 @@ const plans: Plan[] = [
       "Bulk resume uploads",
       "Up to 10 active job roles",
     ],
-    cta: "Start Pro Trial",
+    cta: "Pro Plan Waitlist",
   },
   {
     name: "Team",
-    subtitle: "For organizations with high hiring volume",
-    price: "$49",
+    subtitle: "For organizations with high hiring volume (coming soon)",
+    price: "$24",
     resumesPerMonth: "Up to 2,500 resumes / month",
     support: "Dedicated onboarding + SLA support",
     features: [
@@ -67,7 +69,7 @@ const plans: Plan[] = [
       "Export candidate summaries",
       "Custom limits and add-ons",
     ],
-    cta: "Contact Sales",
+    cta: "Team Plan Waitlist",
   },
 ];
 
@@ -107,6 +109,24 @@ const container = {
 };
 
 export default function PricingPage() {
+  const [betaNotice, setBetaNotice] = useState<string | null>(null);
+  const [showFreeBetaLink, setShowFreeBetaLink] = useState(false);
+
+  const handlePlanClick = (planName: Plan["name"]) => {
+    if (planName === "Free") {
+      setShowFreeBetaLink(true);
+      setBetaNotice(
+        "Sortres is currently in beta. Only the Free tier is live today. You can start now at app.sortres.com."
+      );
+      return;
+    }
+
+    setShowFreeBetaLink(true);
+    setBetaNotice(
+      "Sortres is currently in beta and not fully launched. Pro and Team plans are not yet available. You can try the Free tier for now."
+    );
+  };
+
   return (
     <main className="relative overflow-hidden px-6 py-16 md:px-10">
       <div className="pointer-events-none absolute -top-20 -left-12 size-72 rounded-full bg-blue-400/20 blur-3xl" />
@@ -122,9 +142,28 @@ export default function PricingPage() {
             Scale hiring faster with AI resume screening
           </h1>
           <p className="mx-auto max-w-2xl text-muted-foreground sm:text-lg">
-            Start free, pay as your hiring volume grows. Every plan includes AI candidate scoring and ranked insights.
+            Sortres is in beta. Start with the Free tier today, with Pro and Team plans launching soon.
           </p>
         </motion.section>
+
+        {betaNotice ? (
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="show"
+            className="rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200"
+          >
+            <p className="font-medium">Beta availability update</p>
+            <p className="mt-1">{betaNotice}</p>
+            {showFreeBetaLink ? (
+              <div className="mt-3">
+                <Button size="sm" asChild>
+                  <Link href={APP_BASE_URL}>Continue to Free Beta</Link>
+                </Button>
+              </div>
+            ) : null}
+          </motion.div>
+        ) : null}
 
         <motion.section
           variants={container}
@@ -138,8 +177,8 @@ export default function PricingPage() {
               key={plan.name}
               className={
                 plan.featured
-                  ? "border-primary/50 bg-linear-to-b from-primary/5 to-transparent shadow-lg"
-                  : "border-border/80 bg-background/90"
+                  ? "flex h-full flex-col border-primary/50 bg-linear-to-b from-primary/5 to-transparent shadow-lg"
+                  : "flex h-full flex-col border-border/80 bg-background/90"
               }
             >
               <CardHeader className="space-y-3">
@@ -154,7 +193,7 @@ export default function PricingPage() {
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-5">
+              <CardContent className="flex flex-1 flex-col space-y-5">
                 <div className="space-y-1 rounded-lg border border-border/70 bg-muted/30 p-3 text-sm">
                   <p className="font-medium">{plan.resumesPerMonth}</p>
                   <p className="text-muted-foreground">{plan.support}</p>
@@ -170,8 +209,13 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
 
-              <CardFooter>
-                <Button className="w-full" variant={plan.featured ? "default" : "outline"} size="lg">
+              <CardFooter className={plan.name === "Free" ? "pt-8" : "pt-6"}>
+                <Button
+                  className="w-full"
+                  variant={plan.featured ? "default" : "outline"}
+                  size="lg"
+                  onClick={() => handlePlanClick(plan.name)}
+                >
                   {plan.cta}
                 </Button>
               </CardFooter>
@@ -218,11 +262,11 @@ export default function PricingPage() {
         >
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Start screening smarter with Sortres</h2>
           <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-            Try the Free plan today and move from manual screening to AI-powered shortlists in minutes.
+            Try free beta access today and move from manual screening to AI-powered shortlists in minutes.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/">Get Started Free</Link>
+              <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="/contact">Talk to Sales</Link>

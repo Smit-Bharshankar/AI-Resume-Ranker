@@ -2,9 +2,11 @@
 
 import { motion } from "framer-motion";
 import { PlayCircle, Sparkles, UploadCloud } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_BASE_URL } from "@/lib/urls";
 
 const reveal = {
   initial: { opacity: 0, y: 40 },
@@ -30,14 +32,17 @@ export default function Hero() {
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
+              asChild
               size="lg"
               className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:from-blue-500 hover:to-purple-500"
             >
-              Join Beta
+              <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
-            <Button size="lg" variant="outline" className="gap-2">
-              <PlayCircle className="size-4" />
-              Explore Workflow
+            <Button size="lg" variant="outline" className="gap-2" asChild>
+              <Link href="/features">
+                <PlayCircle className="size-4" />
+                Explore Workflow
+              </Link>
             </Button>
           </div>
 

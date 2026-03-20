@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_BASE_URL } from "@/lib/urls";
 
 const reveal = {
   hidden: { opacity: 0, y: 22 },
@@ -167,11 +168,11 @@ export default function AboutPage() {
         >
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Join us as we shape the future of hiring</h2>
           <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-            We are building Sortres to help teams hire with more clarity, speed, and confidence.
+            We are building Sortres to help teams hire with more clarity, speed, and confidence. Free beta access is open now.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/">Try Sortres</Link>
+              <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
               <Link href="/contact">Contact Us</Link>

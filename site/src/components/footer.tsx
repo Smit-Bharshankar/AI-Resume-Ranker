@@ -6,6 +6,7 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
+import { APP_BASE_URL, APP_LOGIN_URL } from "@/lib/urls";
 
 export default function Footer() {
   const { resolvedTheme, setTheme } = useTheme();
@@ -72,10 +73,10 @@ export default function Footer() {
             <p className="text-sm font-semibold text-foreground">CTA</p>
             <div className="flex flex-col gap-2">
               <Button asChild>
-                <Link href="/pricing">Try Sortres</Link>
+                <Link href={APP_BASE_URL}>Try Free Beta</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/contact">Login</Link>
+                <Link href={APP_LOGIN_URL}>Login</Link>
               </Button>
             </div>
             <div className="pt-2">

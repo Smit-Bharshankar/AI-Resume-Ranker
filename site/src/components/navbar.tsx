@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useNavbarScroll } from "@/hooks/use-navbar-scroll";
+import { APP_BASE_URL, APP_LOGIN_URL } from "@/lib/urls";
 import { cn } from "@/lib/utils";
 
 import { Button } from "./ui/button";
@@ -68,10 +69,10 @@ export default function Navbar() {
               className={cn(isGlass ? "" : "text-foreground hover:bg-black/10 hover:text-foreground dark:text-white dark:hover:bg-white/15 dark:hover:text-white")}
               asChild
             >
-              <Link href="/contact">Login</Link>
+              <Link href={APP_LOGIN_URL}>Login</Link>
             </Button>
             <Button className="shadow-sm" asChild>
-              <Link href="/pricing">Try Beta</Link>
+              <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
           </div>
 
@@ -137,13 +138,13 @@ export default function Navbar() {
 
               <div className="mt-6 flex flex-col gap-2">
                 <Button variant="outline" asChild>
-                  <Link href="/contact" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Link href={APP_LOGIN_URL} onClick={() => setIsMobileMenuOpen(false)}>
                     Login
                   </Link>
                 </Button>
                 <Button asChild>
-                  <Link href="/pricing" onClick={() => setIsMobileMenuOpen(false)}>
-                    Try Beta
+                  <Link href={APP_BASE_URL} onClick={() => setIsMobileMenuOpen(false)}>
+                    Try Free Beta
                   </Link>
                 </Button>
               </div>

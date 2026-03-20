@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_BASE_URL } from "@/lib/urls";
 
 const workflowSteps = [
   "Paste job description",
@@ -168,16 +169,16 @@ export default function FeaturesPage() {
           viewport={{ once: true, amount: 0.2 }}
           className="rounded-2xl border border-border/70 bg-background/90 p-8 text-center md:p-10"
         >
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Try Sortres for your next hiring sprint</h2>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Put Sortres to work in your next hiring sprint</h2>
           <p className="mx-auto mt-3 max-w-2xl text-muted-foreground">
-            Start free and see how quickly your team can move from resume pile to interview-ready shortlist.
+            Start with free beta access and see how quickly your team can move from resume pile to interview-ready shortlist.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button size="lg" asChild>
-              <Link href="/">Get Started</Link>
+              <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/pricing">View Pricing</Link>
+              <Link href="/pricing">View Beta Pricing</Link>
             </Button>
           </div>
         </motion.section>
