@@ -28,6 +28,8 @@ const steps = [
   },
 ];
 
+const useCases = ["Engineering", "Sales", "Operations", "Customer Success"];
+
 export default function Workflow() {
   return (
     <section className="px-6 md:px-10">
@@ -41,6 +43,16 @@ export default function Workflow() {
         >
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">AI-powered hiring workflow</h2>
           <p className="text-muted-foreground">From job criteria to ranked candidates in minutes.</p>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {useCases.map((useCase) => (
+              <span
+                key={useCase}
+                className="rounded-full border border-[color-mix(in_srgb,var(--brand-accent)_22%,var(--border))] bg-[color-mix(in_srgb,var(--brand-accent)_10%,transparent)] px-3 py-1 text-xs font-medium text-[color:color-mix(in_srgb,var(--brand-accent-strong)_82%,var(--foreground))]"
+              >
+                {useCase}
+              </span>
+            ))}
+          </div>
         </motion.div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -57,7 +69,7 @@ export default function Workflow() {
               >
                 <Card className="h-full rounded-xl border border-border/70 bg-background/75 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardHeader className="space-y-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white shadow-md">
+                    <div className="brand-bg-gradient-br flex size-10 items-center justify-center rounded-full text-white shadow-md">
                       <Icon className="size-5" />
                     </div>
                     <CardTitle className="text-lg">{step.title}</CardTitle>

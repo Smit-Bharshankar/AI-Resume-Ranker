@@ -42,16 +42,16 @@ export default function AIPipeline() {
         </motion.div>
 
         <div className="relative">
-          <div className="pointer-events-none absolute top-6 right-0 left-0 hidden h-px bg-linear-to-r from-transparent via-blue-300/60 to-transparent md:block" />
-          <div className="pointer-events-none absolute top-0 bottom-0 left-6 block w-px bg-linear-to-b from-transparent via-blue-300/60 to-transparent md:hidden" />
+          <div className="pointer-events-none absolute top-6 right-0 left-0 hidden h-px bg-[linear-gradient(to_right,transparent,var(--brand-line),transparent)] md:block" />
+          <div className="pointer-events-none absolute top-0 bottom-0 left-6 block w-px bg-[linear-gradient(to_bottom,transparent,var(--brand-line),transparent)] md:hidden" />
 
           <motion.div
-            className="pointer-events-none absolute top-4 hidden size-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shadow-[0_0_20px_rgba(99,102,241,0.65)] md:block"
+            className="pointer-events-none absolute top-4 hidden size-4 rounded-full brand-bg-gradient-br shadow-[0_0_20px_var(--brand-glow)] md:block"
             animate={{ x: ["0%", "96%", "0%"] }}
             transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
           />
           <motion.div
-            className="pointer-events-none absolute left-4 block size-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 shadow-[0_0_20px_rgba(99,102,241,0.65)] md:hidden"
+            className="pointer-events-none absolute left-4 block size-4 rounded-full brand-bg-gradient-br shadow-[0_0_20px_var(--brand-glow)] md:hidden"
             animate={{ y: ["0%", "96%", "0%"] }}
             transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
           />
@@ -70,7 +70,7 @@ export default function AIPipeline() {
                   className="relative"
                 >
                   <motion.div
-                    className="absolute inset-0 -z-10 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-xl"
+                    className="absolute inset-0 -z-10 rounded-xl bg-[linear-gradient(to_right,color-mix(in_srgb,var(--brand-accent)_22%,transparent),color-mix(in_srgb,var(--brand-accent-strong)_22%,transparent))] blur-xl"
                     animate={{ opacity: [0.2, 0.55, 0.2] }}
                     transition={{
                       duration: 4,
@@ -80,7 +80,7 @@ export default function AIPipeline() {
                     }}
                   />
                   <div className="h-full rounded-xl border border-border/70 bg-background/75 p-5 shadow-lg backdrop-blur-md">
-                    <div className="mb-4 inline-flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                    <div className="brand-bg-gradient-br mb-4 inline-flex size-10 items-center justify-center rounded-full text-white">
                       <Icon className="size-5" />
                     </div>
                     <h3 className="text-base font-semibold">{step.title}</h3>

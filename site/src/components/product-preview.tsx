@@ -23,8 +23,8 @@ export default function ProductPreview() {
           viewport={{ once: true, amount: 0.25 }}
           className="relative overflow-hidden rounded-2xl border border-border/70 bg-background/75 p-6 shadow-lg backdrop-blur-md sm:p-8"
         >
-          <div className="absolute -top-10 -right-10 size-32 rounded-full bg-blue-500/15 blur-2xl" />
-          <div className="absolute -bottom-14 -left-10 size-40 rounded-full bg-purple-500/15 blur-2xl" />
+          <div className="absolute -top-10 -right-10 size-32 rounded-full bg-[color-mix(in_srgb,var(--brand-accent)_16%,transparent)] blur-2xl" />
+          <div className="absolute -bottom-14 -left-10 size-40 rounded-full bg-[color-mix(in_srgb,var(--brand-accent-strong)_16%,transparent)] blur-2xl" />
           <div className="relative">
             <CandidateRankingDemo />
           </div>

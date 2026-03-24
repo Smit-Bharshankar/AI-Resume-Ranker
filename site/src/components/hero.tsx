@@ -23,7 +23,7 @@ export default function Hero() {
           <div className="inline-flex items-center rounded-full border border-border/70 bg-background/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur-md">
             AI Resume Screening Platform
           </div>
-          <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-balance text-4xl font-semibold tracking-tight text-transparent sm:text-5xl lg:text-6xl">
+          <h1 className="brand-text-gradient text-balance text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
             Screen hundreds of resumes in minutes with AI
           </h1>
           <p className="max-w-xl text-base text-muted-foreground sm:text-lg">
@@ -34,7 +34,7 @@ export default function Hero() {
             <Button
               asChild
               size="lg"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transition-transform duration-300 hover:scale-105 hover:from-blue-500 hover:to-purple-500"
+              className="brand-bg-gradient text-white shadow-lg transition-transform duration-300 hover:scale-105 brightness-100 hover:brightness-110"
             >
               <Link href={APP_BASE_URL}>Try Free Beta</Link>
             </Button>
@@ -50,19 +50,19 @@ export default function Hero() {
         </motion.div>
 
         <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.1 }} className="relative z-10">
-          <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br from-blue-500/15 to-purple-500/15 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 -z-10 rounded-3xl bg-[linear-gradient(to_bottom_right,color-mix(in_srgb,var(--brand-accent)_18%,transparent),color-mix(in_srgb,var(--brand-accent-strong)_18%,transparent))] blur-3xl" />
           <motion.div
-            className="pointer-events-none absolute -left-4 top-10 size-4 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 opacity-70 blur-[1px]"
+            className="pointer-events-none absolute -left-4 top-10 size-4 rounded-full brand-bg-gradient-br opacity-70 blur-[1px]"
             animate={{ y: [0, -15, 0] }}
             transition={{ duration: 3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
           />
           <motion.div
-            className="pointer-events-none absolute right-6 -top-3 size-3 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 opacity-70 blur-[1px]"
+            className="pointer-events-none absolute right-6 -top-3 size-3 rounded-full brand-bg-gradient-br opacity-70 blur-[1px]"
             animate={{ y: [0, -12, 0] }}
             transition={{ duration: 2.8, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 0.35 }}
           />
           <motion.div
-            className="pointer-events-none absolute -bottom-2 right-12 size-5 rounded-full bg-gradient-to-br from-blue-400 to-purple-400 opacity-60 blur-[1px]"
+            className="pointer-events-none absolute -bottom-2 right-12 size-5 rounded-full brand-bg-gradient-br opacity-60 blur-[1px]"
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 3.4, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut", delay: 0.15 }}
           />

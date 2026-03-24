@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Moon, Sun } from "lucide-react";
 
-import { useTheme } from "@/hooks/use-theme";
+import { BRAND_THEME_OPTIONS, type BrandTheme, useTheme } from "@/hooks/use-theme";
 import { Button } from "@/components/ui/button";
 import { APP_BASE_URL, APP_LOGIN_URL } from "@/lib/urls";
 
 export default function Footer() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme, brandTheme, setBrandTheme } = useTheme();
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -80,21 +80,41 @@ export default function Footer() {
               </Button>
             </div>
             <div className="pt-2">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Theme</p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const nextIsDark = !isDark;
-                  setIsDark(nextIsDark);
-                  setTheme(nextIsDark ? "dark" : "light");
-                }}
-                className="gap-2"
-              >
-                {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-                {/* {isDark ? "Switch to Light" : "Switch to Dark"} */}
-              </Button>
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Appearance</p>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const nextIsDark = !isDark;
+                    setIsDark(nextIsDark);
+                    setTheme(nextIsDark ? "dark" : "light");
+                  }}
+                  className="w-full justify-start gap-2"
+                >
+                  {isDark ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+                  <span>{isDark ? "Light Mode" : "Dark Mode"}</span>
+                </Button>
+
+                <div className="space-y-1">
+                  <label htmlFor="brand-theme" className="text-xs font-medium text-muted-foreground">
+                    Brand Theme
+                  </label>
+                  <select
+                    id="brand-theme"
+                    value={brandTheme}
+                    onChange={(event) => setBrandTheme(event.target.value as BrandTheme)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/40"
+                  >
+                    {BRAND_THEME_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>

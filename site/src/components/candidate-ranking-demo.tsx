@@ -46,7 +46,7 @@ export default function CandidateRankingDemo() {
     <div className="rounded-2xl border border-border/70 bg-background/75 p-5 shadow-lg backdrop-blur-md">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-medium text-muted-foreground">Live candidate ordering</h3>
-        <Badge className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">AI Ranking Demo</Badge>
+        <Badge className="brand-bg-gradient text-white">AI Ranking Demo</Badge>
       </div>
 
       <motion.ol layout className="space-y-3">
@@ -73,7 +73,7 @@ export default function CandidateRankingDemo() {
 
               <div className="h-2 rounded-full bg-muted">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500"
+                  className="h-full rounded-full brand-bg-gradient"
                   initial={false}
                   animate={{ width: `${candidate.score}%` }}
                   transition={{ duration: 0.55, ease: "easeOut" }}

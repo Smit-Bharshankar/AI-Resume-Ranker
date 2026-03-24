@@ -80,6 +80,18 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --brand-accent: #3b82f6;
+  --brand-accent-strong: #7c3aed;
+  --brand-accent-soft: #dbeafe;
+  --brand-gradient-start: #2563eb;
+  --brand-gradient-end: #7c3aed;
+  --brand-glow: rgba(99, 102, 241, 0.45);
+  --brand-surface: color-mix(in srgb, var(--brand-accent) 10%, transparent);
+  --brand-line: color-mix(in srgb, var(--brand-accent) 35%, transparent);
+  --brand-badge-bg: linear-gradient(to right, var(--brand-gradient-start), var(--brand-gradient-end));
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: var(--brand-accent);
+  --brand-progress-end: var(--brand-accent-strong);
 }
 
 .dark {
@@ -114,6 +126,124 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --brand-surface: color-mix(in srgb, var(--brand-accent) 16%, transparent);
+  --brand-line: color-mix(in srgb, var(--brand-accent) 45%, transparent);
+}
+
+:root[data-brand-theme="legacy-purple"] {
+  --brand-accent: #2563eb;
+  --brand-accent-strong: #7c3aed;
+  --brand-accent-soft: #dbeafe;
+  --brand-gradient-start: #2563eb;
+  --brand-gradient-end: #7c3aed;
+  --brand-glow: rgba(124, 58, 237, 0.42);
+  --brand-surface: color-mix(in srgb, #2563eb 9%, transparent);
+  --brand-line: color-mix(in srgb, #2563eb 40%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #2563eb, #7c3aed);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #2563eb;
+  --brand-progress-end: #7c3aed;
+}
+
+:root[data-brand-theme="dark-teal"] {
+  --brand-accent: #19c3e6;
+  --brand-accent-strong: #0f758a;
+  --brand-accent-soft: #d1f3fa;
+  --brand-gradient-start: #19c3e6;
+  --brand-gradient-end: #0f758a;
+  --brand-glow: rgba(25, 195, 230, 0.42);
+  --brand-surface: color-mix(in srgb, #19c3e6 12%, transparent);
+  --brand-line: color-mix(in srgb, #19c3e6 45%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #19c3e6, #0f758a);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #19c3e6;
+  --brand-progress-end: #0f758a;
+}
+
+:root[data-brand-theme="rosewood"] {
+  --brand-accent: #c33c55;
+  --brand-accent-strong: #752433;
+  --brand-accent-soft: #f3d8dd;
+  --brand-gradient-start: #c33c55;
+  --brand-gradient-end: #752433;
+  --brand-glow: rgba(195, 60, 85, 0.42);
+  --brand-surface: color-mix(in srgb, #c33c55 12%, transparent);
+  --brand-line: color-mix(in srgb, #c33c55 45%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #c33c55, #752433);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #c33c55;
+  --brand-progress-end: #752433;
+}
+
+:root[data-brand-theme="cherry-rose"] {
+  --brand-accent: #d42b55;
+  --brand-accent-strong: #7f1a33;
+  --brand-accent-soft: #f6d5dd;
+  --brand-gradient-start: #d42b55;
+  --brand-gradient-end: #7f1a33;
+  --brand-glow: rgba(212, 43, 85, 0.42);
+  --brand-surface: color-mix(in srgb, #d42b55 12%, transparent);
+  --brand-line: color-mix(in srgb, #d42b55 45%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #d42b55, #7f1a33);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #d42b55;
+  --brand-progress-end: #7f1a33;
+}
+
+:root[data-brand-theme="prussian-blue"] {
+  --brand-accent: #2476db;
+  --brand-accent-strong: #154784;
+  --brand-accent-soft: #d3e4f8;
+  --brand-gradient-start: #2476db;
+  --brand-gradient-end: #154784;
+  --brand-glow: rgba(36, 118, 219, 0.42);
+  --brand-surface: color-mix(in srgb, #2476db 11%, transparent);
+  --brand-line: color-mix(in srgb, #2476db 40%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #2476db, #154784);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #2476db;
+  --brand-progress-end: #154784;
+}
+
+:root[data-brand-theme="harvest-orange"] {
+  --brand-accent: #fa7b05;
+  --brand-accent-strong: #964a03;
+  --brand-accent-soft: #fee5cd;
+  --brand-gradient-start: #fa7b05;
+  --brand-gradient-end: #964a03;
+  --brand-glow: rgba(250, 123, 5, 0.42);
+  --brand-surface: color-mix(in srgb, #fa7b05 12%, transparent);
+  --brand-line: color-mix(in srgb, #fa7b05 45%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #fa7b05, #964a03);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #fa7b05;
+  --brand-progress-end: #964a03;
+}
+
+:root[data-brand-theme="coffee-cinnabar"] {
+  --brand-accent: #93706c;
+  --brand-accent-strong: #f4130b;
+  --brand-accent-soft: #e9e2e2;
+  --brand-gradient-start: #93706c;
+  --brand-gradient-end: #f4130b;
+  --brand-glow: rgba(148, 111, 108, 0.42);
+  --brand-surface: color-mix(in srgb, #93706c 12%, transparent);
+  --brand-line: color-mix(in srgb, #f4130b 35%, transparent);
+  --brand-badge-bg: linear-gradient(to right, #93706c, #f4130b);
+  --brand-badge-fg: #ffffff;
+  --brand-progress-start: #93706c;
+  --brand-progress-end: #f4130b;
+}
+
+.dark[data-brand-theme="legacy-purple"],
+.dark[data-brand-theme="dark-teal"],
+.dark[data-brand-theme="rosewood"],
+.dark[data-brand-theme="cherry-rose"],
+.dark[data-brand-theme="prussian-blue"],
+.dark[data-brand-theme="harvest-orange"],
+.dark[data-brand-theme="coffee-cinnabar"] {
+  --brand-surface: color-mix(in srgb, var(--brand-accent) 20%, transparent);
+  --brand-line: color-mix(in srgb, var(--brand-accent) 58%, transparent);
 }
 
 @layer base {
@@ -122,5 +252,27 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .brand-text-gradient {
+    background-image: linear-gradient(to right, var(--brand-gradient-start), var(--brand-gradient-end));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .brand-bg-gradient {
+    background-image: linear-gradient(to right, var(--brand-gradient-start), var(--brand-gradient-end));
+  }
+
+  .brand-bg-gradient-br {
+    background-image: linear-gradient(to bottom right, var(--brand-gradient-start), var(--brand-gradient-end));
+  }
+
+  .brand-glow-surface {
+    background: linear-gradient(to right, color-mix(in srgb, var(--brand-accent) 24%, transparent), color-mix(in srgb, var(--brand-accent-strong) 24%, transparent));
+    filter: blur(20px);
   }
 }

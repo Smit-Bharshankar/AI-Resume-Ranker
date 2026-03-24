@@ -50,15 +50,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning data-brand-theme="legacy-purple">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Script id="theme-init" strategy="beforeInteractive">
           {`(() => {
             try {
               const saved = localStorage.getItem("sortres-theme");
+              const savedBrandTheme = localStorage.getItem("sortres-brand-theme");
               const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
               const resolved = saved === "light" || saved === "dark" ? saved : (prefersDark ? "dark" : "light");
+              const allowedBrandThemes = [
+                "legacy-purple",
+                "dark-teal",
+                "rosewood",
+                "cherry-rose",
+                "prussian-blue",
+                "harvest-orange",
+                "coffee-cinnabar",
+              ];
+              const resolvedBrandTheme = allowedBrandThemes.includes(savedBrandTheme) ? savedBrandTheme : "legacy-purple";
               document.documentElement.classList.toggle("dark", resolved === "dark");
+              document.documentElement.setAttribute("data-brand-theme", resolvedBrandTheme);
             } catch (_) {}
           })();`}
         </Script>

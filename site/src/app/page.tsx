@@ -16,8 +16,8 @@ function SectionDivider() {
 export default function Home() {
   return (
     <div className="relative overflow-hidden">
-      <div className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-blue-400/25 blur-3xl" />
-      <div className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-purple-400/25 blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 -left-16 size-72 rounded-full bg-[color-mix(in_srgb,var(--brand-accent)_28%,transparent)] blur-3xl" />
+      <div className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-[color-mix(in_srgb,var(--brand-accent-strong)_28%,transparent)] blur-3xl" />
 
       <main className="relative z-10 flex flex-col">
         <Hero />

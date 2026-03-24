@@ -53,7 +53,7 @@ export default function Problem() {
               >
                 <Card className="h-full rounded-xl border border-border/70 bg-background/75 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <CardHeader className="space-y-3">
-                    <div className="flex size-11 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-500 text-white shadow-md">
+                    <div className="brand-bg-gradient-br flex size-11 items-center justify-center rounded-full text-white shadow-md">
                       <Icon className="size-5" />
                     </div>
                     <CardTitle className="text-lg">{problem.title}</CardTitle>

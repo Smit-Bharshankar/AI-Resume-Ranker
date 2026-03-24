@@ -51,7 +51,7 @@ export default function Stats() {
             >
               <Card className="h-full rounded-xl border border-border/70 bg-background/75 shadow-lg backdrop-blur-md transition-all duration-300 hover:scale-105 hover:shadow-xl">
                 <CardContent className="space-y-2 pt-6">
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-4xl font-semibold tracking-tight text-transparent sm:text-5xl">
+                  <div className="brand-text-gradient text-4xl font-semibold tracking-tight sm:text-5xl">
                     <CountUp end={stat.value} duration={2} enableScrollSpy scrollSpyOnce />
                     {stat.suffix}
                   </div>
