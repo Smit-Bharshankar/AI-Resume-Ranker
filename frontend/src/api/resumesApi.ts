@@ -24,6 +24,18 @@ export type DeleteResumeResponse = {
   message: string;
 };
 
+export type RetryResumeResponse = {
+  resumeId: string;
+  action: "manual_retry";
+  fromStatus: string;
+  toStatus: string;
+  currentStatus: string;
+  retryAllowed: boolean;
+  lastError: unknown | null;
+  retryCount: number;
+  maxManualRetries: number;
+};
+
 type UploadResumesOptions = {
   onUploadProgress?: (progressPercent: number) => void;
 };
@@ -267,5 +279,11 @@ export const deleteResume = async ({
         confirm,
       },
     })
+  );
+};
+
+export const retryResume = async (resumeId: string): Promise<RetryResumeResponse> => {
+  return request<RetryResumeResponse>(
+    axiosClient.post<RetryResumeResponse>(`/resumes/${resumeId}/retry`)
   );
 };

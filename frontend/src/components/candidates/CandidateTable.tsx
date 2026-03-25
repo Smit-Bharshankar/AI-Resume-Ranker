@@ -6,16 +6,20 @@ type CandidateTableProps = {
   resumes: Resume[];
   onStageChange: (resumeId: string, stage: CandidateStage) => void;
   onDeleteResume?: (resume: Resume) => void;
+  onRetryResume?: (resume: Resume) => void;
   deletingResumeId?: string;
   updatingResumeId?: string;
+  retryingResumeId?: string;
 };
 
 export function CandidateTable({
   resumes,
   onStageChange,
   onDeleteResume,
+  onRetryResume,
   deletingResumeId,
   updatingResumeId,
+  retryingResumeId,
 }: CandidateTableProps) {
   if (resumes.length === 0) {
     return (
@@ -71,8 +75,10 @@ export function CandidateTable({
                 resume={resume}
                 onStageChange={onStageChange}
                 onDelete={onDeleteResume}
+                onRetry={onRetryResume}
                 isDeleting={deletingResumeId === resume.id}
                 isStageUpdating={updatingResumeId === resume.id}
+                isRetrying={retryingResumeId === resume.id}
               />
             ))}
           </tbody>

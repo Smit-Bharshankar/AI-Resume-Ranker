@@ -14,6 +14,8 @@ import { capturePosthogEvent } from "../analytics/posthog.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
 import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
+import { classifyRetry } from "./retryPolicy.js";
+import { withOperationTimeout } from "../utils/operationTimeout.js";
 
 const signal = (icon, label, meta = {}) => {
   const ts = new Date().toISOString();
@@ -57,12 +59,32 @@ const normalizeText = (rawText) => {
     .trim();
 };
 
-const enqueueInsightsPipeline = async ({ resumeId, userId, jobId, jobLogger }) => {
+const enqueueInsightsPipeline = async ({ resumeId, userId, jobId, jobLogger, attempt }) => {
+  const startedAtMs = Date.now();
   await enqueueResumeInsightGeneration({ resumeId, userId, jobId });
 
   jobLogger.info("Resume insights generation enqueued", {
     stage: "insights_enqueue",
     nextStatus: "SCORED",
+  });
+  logStageResult({
+    jobLogger,
+    resumeId,
+    stage: "INSIGHTS_ENQUEUE",
+    attempt,
+    durationMs: Date.now() - startedAtMs,
+    result: "success",
+  });
+};
+
+const logStageResult = ({ jobLogger, resumeId, stage, attempt, durationMs, result, code = null }) => {
+  jobLogger.info("Resume stage execution", {
+    resumeId,
+    stage,
+    attempt,
+    durationMs,
+    result,
+    code,
   });
 };
 
@@ -134,13 +156,29 @@ const processResumeJob = async (job) => {
   if (resume.status === "UPLOADED") {
     const extractionStartedAtMs = Date.now();
     try {
-      const fileBuffer = await supabaseStorage.downloadResume(resume.storagePath);
+      const fileBuffer = await withOperationTimeout({
+        timeoutMs: env.storageReadTimeoutMs,
+        operationName: "Resume file download",
+        operation: () => supabaseStorage.downloadResume(resume.storagePath),
+      });
       const parser = new PDFParse({ data: fileBuffer });
       let parsedText = "";
 
       try {
-        const parsed = await parser.getText();
+        const parsed = await withOperationTimeout({
+          timeoutMs: env.pdfParseTimeoutMs,
+          operationName: "PDF text extraction",
+          operation: () => parser.getText(),
+        });
         parsedText = parsed.text ?? "";
+      } catch (error) {
+        if (error?.code !== "PROCESS_TIMEOUT") {
+          const invalidPdfError = new Error("Invalid PDF file");
+          invalidPdfError.code = "INVALID_PDF";
+          invalidPdfError.retryable = false;
+          throw invalidPdfError;
+        }
+        throw error;
       } finally {
         await parser.destroy();
       }
@@ -148,7 +186,10 @@ const processResumeJob = async (job) => {
       const normalizedText = normalizeText(parsedText);
 
       if (!normalizedText) {
-        throw new Error("Extracted text was empty");
+        const emptyExtractionError = new Error("Extracted text was empty");
+        emptyExtractionError.code = "EMPTY_EXTRACTION_RESULT";
+        emptyExtractionError.retryable = false;
+        throw emptyExtractionError;
       }
 
       const updated = await resumeService.completeTextExtraction({
@@ -172,6 +213,14 @@ const processResumeJob = async (job) => {
         stage: "text_extraction",
         durationMs: Date.now() - extractionStartedAtMs,
       });
+      logStageResult({
+        jobLogger,
+        resumeId,
+        stage: "TEXT_EXTRACTION",
+        attempt,
+        durationMs: Date.now() - extractionStartedAtMs,
+        result: "success",
+      });
       jobResult.stages.textExtraction = "completed";
       signal("📄", "resume:text-ok", {
         resumeId,
@@ -192,6 +241,7 @@ const processResumeJob = async (job) => {
       const attempts = job.opts.attempts ?? env.resumeQueueAttempts;
       const isFinalAttempt = job.attemptsMade + 1 >= attempts;
       const reason = resolveFailureReason(error, "RESUME_TEXT_EXTRACTION_FAILED");
+      reason.retryable = classifyRetry(error).retryable;
       Sentry.captureException(error, {
         tags: {
           queue: env.resumeQueueName,
@@ -224,6 +274,15 @@ const processResumeJob = async (job) => {
         durationMs: Date.now() - extractionStartedAtMs,
         error: error.message,
       });
+      logStageResult({
+        jobLogger,
+        resumeId,
+        stage: "TEXT_EXTRACTION",
+        attempt,
+        durationMs: Date.now() - extractionStartedAtMs,
+        result: reason.retryable && !isFinalAttempt ? "retry" : "failed",
+        code: reason.code,
+      });
 
       if (isFinalAttempt) {
         await resumeService.markExtractionFailed(
@@ -240,7 +299,6 @@ const processResumeJob = async (job) => {
 
       if (!reason.retryable) {
         throwUnrecoverable(reason);
-      } else {
       }
 
       throw error;
@@ -266,6 +324,18 @@ const processResumeJob = async (job) => {
       structureStatus: structureResult?.status ?? "unknown",
       durationMs: Date.now() - structuringStartedAtMs,
     });
+    logStageResult({
+      jobLogger,
+      resumeId,
+      stage: "STRUCTURING",
+      attempt,
+      durationMs: Date.now() - structuringStartedAtMs,
+      result:
+        structureResult?.status === "failed"
+          ? (structureResult?.retryable ? "retry" : "failed")
+          : (structureResult?.status ?? "unknown"),
+      code: structureResult?.failureCode ?? null,
+    });
 
     if (structureResult?.status === "structured") {
       const scoringStartedAtMs = Date.now();
@@ -282,6 +352,18 @@ const processResumeJob = async (job) => {
         durationMs: Date.now() - scoringStartedAtMs,
         totalDurationMs: Date.now() - startedAtMs,
       });
+      logStageResult({
+        jobLogger,
+        resumeId,
+        stage: "SCORING",
+        attempt,
+        durationMs: Date.now() - scoringStartedAtMs,
+        result:
+          scoringResult?.status === "failed"
+            ? (scoringResult?.retryable ? "retry" : "failed")
+            : (scoringResult?.status ?? "unknown"),
+        code: scoringResult?.failureCode ?? null,
+      });
 
       if (scoringResult?.status === "scored") {
         try {
@@ -290,12 +372,22 @@ const processResumeJob = async (job) => {
             userId: distinctId,
             jobId: relatedJobId,
             jobLogger,
+            attempt,
           });
           signal("📤", "resume:insight-enqueued", { resumeId });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
             stage: "insights_enqueue",
             error: error.message,
+          });
+          logStageResult({
+            jobLogger,
+            resumeId,
+            stage: "INSIGHTS_ENQUEUE",
+            attempt,
+            durationMs: 0,
+            result: "failed",
+            code: "INSIGHT_ENQUEUE_FAILED",
           });
           throw error;
         }
@@ -370,6 +462,18 @@ const processResumeJob = async (job) => {
         durationMs: Date.now() - scoringStartedAtMs,
         totalDurationMs: Date.now() - startedAtMs,
       });
+      logStageResult({
+        jobLogger,
+        resumeId,
+        stage: "SCORING",
+        attempt,
+        durationMs: Date.now() - scoringStartedAtMs,
+        result:
+          scoringResult?.status === "failed"
+            ? (scoringResult?.retryable ? "retry" : "failed")
+            : (scoringResult?.status ?? "unknown"),
+        code: scoringResult?.failureCode ?? null,
+      });
 
       if (scoringResult?.status === "scored") {
         try {
@@ -378,12 +482,22 @@ const processResumeJob = async (job) => {
             userId: distinctId,
             jobId: relatedJobId,
             jobLogger,
+            attempt,
           });
           signal("📤", "resume:insight-enqueued", { resumeId });
         } catch (error) {
           jobLogger.error("Failed to enqueue resume insights", {
             stage: "insights_enqueue",
             error: error.message,
+          });
+          logStageResult({
+            jobLogger,
+            resumeId,
+            stage: "INSIGHTS_ENQUEUE",
+            attempt,
+            durationMs: 0,
+            result: "failed",
+            code: "INSIGHT_ENQUEUE_FAILED",
           });
           throw error;
         }
@@ -395,13 +509,7 @@ const processResumeJob = async (job) => {
           statusCode: null,
           message: "Resume scoring failed",
         };
-        if (!reason.retryable) {
-          throwUnrecoverable(reason);
-        }
-        const failureError = new Error(reason.message);
-        failureError.code = reason.code;
-        failureError.retryable = reason.retryable;
-        throw failureError;
+        throwUnrecoverable({ ...reason, retryable: false });
       }
       capturePosthogEvent({
         distinctId,
@@ -439,6 +547,18 @@ const processResumeJob = async (job) => {
       durationMs: Date.now() - scoringStartedAtMs,
       totalDurationMs: Date.now() - startedAtMs,
     });
+    logStageResult({
+      jobLogger,
+      resumeId,
+      stage: "SCORING",
+      attempt,
+      durationMs: Date.now() - scoringStartedAtMs,
+      result:
+        scoringResult?.status === "failed"
+          ? (scoringResult?.retryable ? "retry" : "failed")
+          : (scoringResult?.status ?? "unknown"),
+      code: scoringResult?.failureCode ?? null,
+    });
 
     if (scoringResult?.status === "scored") {
       try {
@@ -447,12 +567,22 @@ const processResumeJob = async (job) => {
           userId: distinctId,
           jobId: relatedJobId,
           jobLogger,
+          attempt,
         });
         signal("📤", "resume:insight-enqueued", { resumeId });
       } catch (error) {
         jobLogger.error("Failed to enqueue resume insights", {
           stage: "insights_enqueue",
           error: error.message,
+        });
+        logStageResult({
+          jobLogger,
+          resumeId,
+          stage: "INSIGHTS_ENQUEUE",
+          attempt,
+          durationMs: 0,
+          result: "failed",
+          code: "INSIGHT_ENQUEUE_FAILED",
         });
         throw error;
       }
@@ -464,13 +594,7 @@ const processResumeJob = async (job) => {
         statusCode: null,
         message: "Resume scoring failed",
       };
-      if (!reason.retryable) {
-        throwUnrecoverable(reason);
-      }
-      const failureError = new Error(reason.message);
-      failureError.code = reason.code;
-      failureError.retryable = reason.retryable;
-      throw failureError;
+      throwUnrecoverable({ ...reason, retryable: false });
     }
     capturePosthogEvent({
       distinctId,
@@ -500,12 +624,22 @@ const processResumeJob = async (job) => {
         userId: distinctId,
         jobId: relatedJobId,
         jobLogger,
+        attempt,
       });
       signal("📤", "resume:insight-enqueued", { resumeId });
     } catch (error) {
       jobLogger.error("Failed to enqueue resume insights from scored state", {
         stage: "insights_enqueue",
         error: error.message,
+      });
+      logStageResult({
+        jobLogger,
+        resumeId,
+        stage: "INSIGHTS_ENQUEUE",
+        attempt,
+        durationMs: 0,
+        result: "failed",
+        code: "INSIGHT_ENQUEUE_FAILED",
       });
       throw error;
     }

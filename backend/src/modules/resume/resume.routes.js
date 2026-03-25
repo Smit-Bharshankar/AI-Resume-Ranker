@@ -9,6 +9,7 @@ resumeRoutes.use(authMiddleware);
 resumeRoutes.use(rateLimitMiddleware);
 
 resumeRoutes.patch("/:resumeId/stage", resumeController.patchResumeStage);
+resumeRoutes.post("/:resumeId/retry", resumeController.retryResumeById);
 resumeRoutes.delete("/:resumeId", resumeController.deleteResumeById);
 resumeRoutes.get("/:id", resumeController.getResumeById);
 resumeRoutes.get("/:id/file", resumeController.getResumeFileById);

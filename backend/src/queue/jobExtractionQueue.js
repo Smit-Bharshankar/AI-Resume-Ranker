@@ -1,6 +1,7 @@
 import { Queue } from "bullmq";
 import env from "../config/env.js";
 import { connection } from "./resumeQueue.js";
+import logger from "../utils/logger.js";
 
 const jobExtractionQueue = new Queue(env.jobExtractionQueueName, {
   connection,
@@ -8,7 +9,7 @@ const jobExtractionQueue = new Queue(env.jobExtractionQueueName, {
     attempts: env.jobExtractionQueueAttempts,
     backoff: {
       type: "exponential",
-      delay: env.jobExtractionQueueBackoffMs,
+      delay: env.stageBackoffMs,
     },
     removeOnComplete: {
       count: 1000,
@@ -37,6 +38,11 @@ const getReusableExistingJob = async (jobId) => {
 const enqueueJobRequirementsExtraction = async ({ jobId, userId }) => {
   const existing = await getReusableExistingJob(jobId);
   if (existing) {
+    logger.info("job_extraction_queue_enqueue_skipped_duplicate", {
+      queue: env.jobExtractionQueueName,
+      jobId,
+      existingQueueJobId: existing.id,
+    });
     return existing;
   }
 
@@ -45,6 +51,11 @@ const enqueueJobRequirementsExtraction = async ({ jobId, userId }) => {
     { jobId, userId },
     {
       jobId,
+      attempts: env.jobExtractionQueueAttempts,
+      backoff: {
+        type: "exponential",
+        delay: env.stageBackoffMs,
+      },
     },
   );
 };

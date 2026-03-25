@@ -54,10 +54,10 @@ connection.on("error", (error) => {
 const resumeQueue = new Queue(env.resumeQueueName, {
   connection,
   defaultJobOptions: {
-    attempts: env.resumeQueueAttempts,
+    attempts: env.resumeExtractionAttempts,
     backoff: {
       type: "exponential",
-      delay: env.resumeQueueBackoffMs,
+      delay: env.stageBackoffMs,
     },
     removeOnComplete: {
       count: 1000,
@@ -83,14 +83,30 @@ const getReusableExistingJob = async (jobId) => {
   return existingJob;
 };
 
+const getAttemptsForResumeStatus = (status) => {
+  if (status === "TEXT_EXTRACTED") {
+    return env.resumeStructuringAttempts;
+  }
+  if (status === "STRUCTURED") {
+    return env.resumeScoringAttempts;
+  }
+  return env.resumeExtractionAttempts;
+};
+
 const enqueueResumeExtraction = async ({
   resumeId,
   userId,
   jobId,
   delayMs = 0,
+  attempts = env.resumeExtractionAttempts,
 }) => {
   const existing = await getReusableExistingJob(resumeId);
   if (existing) {
+    logger.info("resume_queue_enqueue_skipped_duplicate", {
+      queue: env.resumeQueueName,
+      resumeId,
+      existingQueueJobId: existing.id,
+    });
     return existing;
   }
 
@@ -99,9 +115,14 @@ const enqueueResumeExtraction = async ({
     { resumeId, userId, jobId },
     {
       jobId: resumeId,
+      attempts,
+      backoff: {
+        type: "exponential",
+        delay: env.stageBackoffMs,
+      },
       delay: Math.max(0, Number(delayMs) || 0),
     },
   );
 };
 
-export { connection, resumeQueue, enqueueResumeExtraction };
+export { connection, resumeQueue, enqueueResumeExtraction, getAttemptsForResumeStatus };

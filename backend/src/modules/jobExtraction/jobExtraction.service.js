@@ -10,6 +10,9 @@ import {
   validateJobStructuredRequirements,
 } from "./jobSchema.validator.js";
 import { buildFailureRecord, resolveFailureReason } from "../ai/failureReason.js";
+import { classifyRetry } from "../../queue/retryPolicy.js";
+import { withOperationTimeout } from "../../utils/operationTimeout.js";
+import { activateGlobalRateLimitCooldown } from "../ai/rateBudget.js";
 
 const MAX_AI_RETRIES = 2;
 
@@ -26,11 +29,6 @@ const getTopLevelKeys = (value) => {
 const getErrorStatus = (error) => {
   const status = error?.status ?? error?.response?.status;
   return Number.isFinite(status) ? status : null;
-};
-
-const isRetriableAiError = (error) => {
-  const status = getErrorStatus(error);
-  return status === 429 || (status !== null && status >= 500);
 };
 
 const resolveRetryDelayMs = (error, attempt) => {
@@ -59,13 +57,18 @@ const requestStructuredRequirements = async ({ jobId, rawDescription }) => {
     model: provider.model,
   });
 
-  const result = await provider.generateJson({
-    systemPrompt,
-    userPrompt,
-    temperature: 0.1,
-    responseSchema: JOB_REQUIREMENTS_JSON_SCHEMA,
-    schemaName: "job_requirements",
-    rateLimitBucket: "job_extraction",
+  const result = await withOperationTimeout({
+    timeoutMs: env.aiCallTimeoutMs,
+    operationName: "Job requirements AI call",
+    operation: () =>
+      provider.generateJson({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.1,
+        responseSchema: JOB_REQUIREMENTS_JSON_SCHEMA,
+        schemaName: "job_requirements",
+        rateLimitBucket: "job_extraction",
+      }),
   });
 
   logger.info("Job extraction AI response received", {
@@ -175,7 +178,13 @@ const process = async (jobId) => {
       };
     } catch (error) {
       const errorStatus = getErrorStatus(error);
-      const retriable = isRetriableAiError(error);
+      if (errorStatus === 429) {
+        await activateGlobalRateLimitCooldown();
+      }
+      const retryClassification = classifyRetry(error);
+      const retriable = retryClassification.retryable;
+      const isValidationError = error instanceof JobSchemaValidationError;
+      const isInvalidJsonError = error?.code === "INVALID_JSON_RESPONSE";
 
       scopedLogger.warn("Job requirements extraction attempt failed", {
         attempt: attemptNumber,
@@ -186,14 +195,21 @@ const process = async (jobId) => {
         error: error.message,
       });
 
-      if (!retriable || isFinalAttempt) {
-        const reason = error instanceof JobSchemaValidationError
+      if (!retriable || isFinalAttempt || isValidationError) {
+        const reason = isValidationError
           ? {
               code: "JOB_SCHEMA_VALIDATION_FAILED",
               retryable: false,
               statusCode: null,
               message: error.message,
             }
+          : isInvalidJsonError && isFinalAttempt
+            ? {
+                code: "AI_INVALID_JSON_RESPONSE",
+                retryable: false,
+                statusCode: null,
+                message: "Invalid JSON returned by AI after retries",
+              }
           : resolveFailureReason(error, "JOB_REQUIREMENTS_EXTRACTION_FAILED");
         await jobService.markRequirementsExtractionFailed({
           id: jobId,
@@ -208,8 +224,8 @@ const process = async (jobId) => {
           retryable: reason.retryable,
           errorStatus,
           errorCode: error?.code,
-          isValidationError: error instanceof JobSchemaValidationError,
-          isInvalidJsonError: error?.code === "INVALID_JSON_RESPONSE",
+          isValidationError,
+          isInvalidJsonError,
           durationMs: Date.now() - startedAtMs,
           error: error.message,
         });

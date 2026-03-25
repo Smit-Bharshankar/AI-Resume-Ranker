@@ -12,6 +12,8 @@
     "worker:insight:dev": "nodemon src/queue/insightWorker.js",
     "worker:job-extraction": "node src/queue/jobExtractionWorker.js",
     "worker:job-extraction:dev": "nodemon src/queue/jobExtractionWorker.js",
+    "worker:recovery": "node src/queue/recoveryWorker.js",
+    "worker:recovery:dev": "nodemon src/queue/recoveryWorker.js",
     "ai:smoke": "node src/scripts/aiExtractionSmoke.js",
     "ai:limit-probe": "node src/scripts/aiRateLimitProbe.js",
     "ai:smoke:key": "node src/scripts/aiExtractionSmoke.js",

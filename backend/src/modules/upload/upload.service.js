@@ -6,6 +6,7 @@ import { enqueueResumeExtraction } from "../../queue/resumeQueue.js";
 import logger from "../../utils/logger.js";
 import env from "../../config/env.js";
 import { PDFParse } from "pdf-parse";
+import { withOperationTimeout } from "../../utils/operationTimeout.js";
 
 class UploadServiceError extends Error {
   constructor(message, statusCode) {
@@ -18,7 +19,11 @@ class UploadServiceError extends Error {
 const parsePdfPages = async (file) => {
   const parser = new PDFParse({ data: file.buffer });
   try {
-    const info = await parser.getInfo();
+    const info = await withOperationTimeout({
+      timeoutMs: env.pdfParseTimeoutMs,
+      operationName: "PDF page validation parse",
+      operation: () => parser.getInfo(),
+    });
     return Number(info?.total ?? 0);
   } catch {
     throw new UploadServiceError("Invalid PDF file. Please upload a valid PDF.", 400);

@@ -3,6 +3,7 @@ import env from "../../config/env.js";
 
 const WINDOW_MS = 60 * 1000;
 const KEY_PREFIX = "ai:budget";
+const GLOBAL_RATE_LIMIT_KEY = "ai:global:cooldown";
 const redisConnectionOptions = {
   maxRetriesPerRequest: null,
   enableReadyCheck: false,
@@ -60,6 +61,16 @@ const createRedisConnection = () => {
 const budgetConnection = createRedisConnection();
 
 const waitForAiBudget = async (bucket) => {
+  const ttlMs = await budgetConnection.pttl(GLOBAL_RATE_LIMIT_KEY);
+  if (Number.isFinite(ttlMs) && ttlMs > 0) {
+    const error = new Error("Global AI rate-limit cooldown is active");
+    error.code = "AI_RATE_LIMIT_COOLDOWN";
+    error.retryable = true;
+    error.statusCode = 429;
+    error.cooldownMs = ttlMs;
+    throw error;
+  }
+
   const limit = resolveLimit(bucket);
   if (!Number.isFinite(limit) || limit <= 0) {
     return;
@@ -84,4 +95,25 @@ const waitForAiBudget = async (bucket) => {
   }
 };
 
-export { waitForAiBudget };
+const activateGlobalRateLimitCooldown = async (
+  ttlSeconds = env.aiGlobalRateLimitCooldownSec,
+) => {
+  const ttl = Math.max(1, Number(ttlSeconds) || 1);
+  await budgetConnection.set(GLOBAL_RATE_LIMIT_KEY, "1", "EX", ttl);
+};
+
+const getGlobalRateLimitCooldownMs = async () => {
+  const ttlMs = await budgetConnection.pttl(GLOBAL_RATE_LIMIT_KEY);
+  return Number.isFinite(ttlMs) && ttlMs > 0 ? ttlMs : 0;
+};
+
+const isGlobalRateLimitCooldownActive = async () => {
+  return (await getGlobalRateLimitCooldownMs()) > 0;
+};
+
+export {
+  waitForAiBudget,
+  activateGlobalRateLimitCooldown,
+  getGlobalRateLimitCooldownMs,
+  isGlobalRateLimitCooldownActive,
+};

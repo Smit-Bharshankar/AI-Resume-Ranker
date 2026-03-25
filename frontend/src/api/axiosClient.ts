@@ -35,6 +35,12 @@ const parseErrorMessage = (error: AxiosError<ApiErrorEnvelope>): ErrorPayload =>
 
   if (statusCode === 401) {
     message = "Your session has expired. Please log in again.";
+  } else if (statusCode === 429) {
+    message = "Service is temporarily busy. Please try again shortly.";
+  } else if (typeof statusCode === "number" && statusCode >= 500) {
+    message = "Something went wrong on our side. Please try again.";
+  } else if (!statusCode) {
+    message = "Network error. Please check your connection and try again.";
   }
 
   return { message, statusCode };

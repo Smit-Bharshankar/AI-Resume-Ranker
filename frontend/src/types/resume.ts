@@ -66,6 +66,9 @@ export type Resume = {
   id: string;
   jobId: string;
   status: ResumeStatus;
+  retryAllowed?: boolean;
+  retryCount?: number;
+  lastError?: unknown | null;
   stage: CandidateStage;
   score?: number;
   scoreBreakdown?: ScoreBreakdown;

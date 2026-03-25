@@ -1,7 +1,9 @@
 import resumeService, { ResumeDeletionServiceError } from "./resume.service.js";
 import stageService, { StageServiceError } from "./stage.service.js";
+import manualRetryService, { ManualRetryServiceError } from "./manualRetry.service.js";
 import { successResponse, errorResponse } from "../../utils/api-response.js";
 import { handleControllerError } from "../../utils/error-handler.js";
+import { getManualRetryCount } from "../../queue/manualRetryLimiter.js";
 
 const UUID_V4_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -27,7 +29,13 @@ const getResumeById = async (req, res) => {
       return res.status(404).json(errorResponse("Resume not found"));
     }
 
-    return res.status(200).json(successResponse(resume));
+    const retryCount = await getManualRetryCount(id);
+    return res.status(200).json(
+      successResponse({
+        ...resume,
+        ...manualRetryService.buildRetryInfo({ resume, retryCount }),
+      }),
+    );
   } catch (error) {
     return handleControllerError(res, error, "Failed to fetch resume");
   }
@@ -118,11 +126,39 @@ const deleteResumeById = async (req, res) => {
   }
 };
 
+const retryResumeById = async (req, res) => {
+  try {
+    const { resumeId } = req.params;
+
+    if (!UUID_V4_REGEX.test(resumeId)) {
+      return res.status(400).json(errorResponse("Invalid resume id"));
+    }
+
+    const result = await manualRetryService.retryFailedResume({
+      resumeId,
+      userId: req.user.id,
+    });
+
+    return res.status(200).json(successResponse(result));
+  } catch (error) {
+    if (error instanceof ManualRetryServiceError) {
+      return res.status(error.statusCode).json({
+        success: false,
+        error: error.message,
+        ...(error.details ? { details: error.details } : {}),
+      });
+    }
+
+    return handleControllerError(res, error, "Failed to retry resume");
+  }
+};
+
 const resumeController = {
   getResumeById,
   getResumeFileById,
   patchResumeStage,
   deleteResumeById,
+  retryResumeById,
 };
 
 export default resumeController;

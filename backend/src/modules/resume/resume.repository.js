@@ -192,6 +192,29 @@ const getResumeById = async (id, userId) => {
   });
 };
 
+const resetFailedStatusForRetry = async ({
+  id,
+  userId,
+  fromStatus,
+  toStatus,
+}) => {
+  const result = await prisma.resume.updateMany({
+    where: withJobUserScope(
+      {
+        id,
+        status: fromStatus,
+      },
+      userId,
+    ),
+    data: {
+      status: toStatus,
+      lastProcessingFailure: null,
+    },
+  });
+
+  return result.count > 0;
+};
+
 const getResumeOwnerContext = async (id) => {
   return prisma.resume.findUnique({
     where: { id },
@@ -531,6 +554,30 @@ const getResumesByJob = async (jobId, userId) => {
   });
 };
 
+const findStuckResumes = async ({ statuses, staleBefore, limit = 200 }) => {
+  return prisma.resume.findMany({
+    where: {
+      status: { in: statuses },
+      updatedAt: { lt: staleBefore },
+    },
+    orderBy: {
+      updatedAt: "asc",
+    },
+    take: limit,
+    select: {
+      id: true,
+      jobId: true,
+      status: true,
+      updatedAt: true,
+      job: {
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
+};
+
 const resumeRepository = {
   createResume,
   updateStatus,
@@ -539,6 +586,7 @@ const resumeRepository = {
   updateResumeStage,
   updateLastProcessingFailure,
   getResumeById,
+  resetFailedStatusForRetry,
   getResumeOwnerContext,
   getResumeDeletionContext,
   completeTextExtraction,
@@ -556,6 +604,7 @@ const resumeRepository = {
   releaseReservationsByJob,
   countResumesByJob,
   getResumesByJob,
+  findStuckResumes,
 };
 
 export default resumeRepository;

@@ -14,6 +14,9 @@ import {
   getErrorStatus,
   resolveFailureReason,
 } from "./failureReason.js";
+import { classifyRetry } from "../../queue/retryPolicy.js";
+import { withOperationTimeout } from "../../utils/operationTimeout.js";
+import { activateGlobalRateLimitCooldown } from "./rateBudget.js";
 
 const truncateErrorText = (value, maxLength = 600) => {
   if (typeof value !== "string") {
@@ -31,37 +34,6 @@ const getTopLevelKeys = (value) => {
   }
 
   return Object.keys(value);
-};
-
-const isRetriableProviderError = (error) => {
-  const status = error?.status ?? error?.response?.status;
-  const code = String(error?.code ?? "").toLowerCase();
-  const type = String(error?.type ?? "").toLowerCase();
-
-  if (Number.isFinite(status)) {
-    if (status === 429) {
-      return true;
-    }
-
-    if (status >= 500) {
-      return true;
-    }
-
-    return false;
-  }
-
-  if (code === "ai_provider_request_failed") {
-    return false;
-  }
-
-  return (
-    type.includes("rate_limit") ||
-    code.includes("429") ||
-    code.includes("rate") ||
-    code.includes("timeout") ||
-    code.includes("econnreset") ||
-    code.includes("ai_provider_timeout")
-  );
 };
 
 const resolveRateLimitDelayMs = (error) => {
@@ -91,13 +63,18 @@ const requestStructuredResume = async ({ resumeId, jobId, rawText }) => {
     model: provider.model,
   });
 
-  const result = await provider.generateJson({
-    systemPrompt,
-    userPrompt,
-    temperature: 0.1,
-    responseSchema: STRUCTURED_RESUME_JSON_SCHEMA,
-    schemaName: "structured_resume",
-    rateLimitBucket: "structuring",
+  const result = await withOperationTimeout({
+    timeoutMs: env.aiCallTimeoutMs,
+    operationName: "Resume structuring AI call",
+    operation: () =>
+      provider.generateJson({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.1,
+        responseSchema: STRUCTURED_RESUME_JSON_SCHEMA,
+        schemaName: "structured_resume",
+        rateLimitBucket: "structuring",
+      }),
   });
 
   logger.info("AI extraction response received", {
@@ -205,11 +182,12 @@ const process = async (resumeId) => {
       const isValidationError = error instanceof ValidationError;
       const isInvalidJsonError = error?.code === "INVALID_JSON_RESPONSE";
       const isConfigError = error?.code === "AI_CONFIG_MISSING";
-      const retriable =
-        isValidationError ||
-        isInvalidJsonError ||
-        isRetriableProviderError(error);
+      const retryClassification = classifyRetry(error);
+      const retriable = !isValidationError && (isInvalidJsonError || retryClassification.retryable);
       const errorStatus = getErrorStatus(error);
+      if (errorStatus === 429) {
+        await activateGlobalRateLimitCooldown();
+      }
       const providerResponseBody = truncateErrorText(error?.responseBody);
       const providerRequestVariant = error?.requestVariant ?? null;
       const providerPreviousFailures = Array.isArray(error?.previousFailures)
@@ -240,7 +218,14 @@ const process = async (resumeId) => {
               statusCode: null,
               message: error.message,
             }
-          : resolveFailureReason(error, "RESUME_STRUCTURING_FAILED");
+          : isInvalidJsonError && isFinalAttempt
+            ? {
+                code: "AI_INVALID_JSON_RESPONSE",
+                retryable: false,
+                statusCode: null,
+                message: "Invalid JSON returned by AI after retries",
+              }
+            : resolveFailureReason(error, "RESUME_STRUCTURING_FAILED");
         await resumeService.markStructureFailed(
           resumeId,
           buildFailureRecord({ stage: "structuring", reason }),

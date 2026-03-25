@@ -8,9 +8,26 @@ import { capturePosthogEvent } from "../analytics/posthog.js";
 import jobService from "../modules/job/job.service.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
+import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
+import { classifyRetry } from "./retryPolicy.js";
 
-const isRetriableError = (error) => {
-  return error?.retryable === true;
+const persistExtractionFailure = async ({ jobId, reason }) => {
+  await jobService.markRequirementsExtractionFailed({
+    id: jobId,
+    currentStatus: "EXTRACTING_REQUIREMENTS",
+    failure: buildFailureRecord({ stage: "requirements_extraction", reason }),
+  });
+};
+
+const logStageResult = ({ baseLogger, jobId, attempt, durationMs, result, code = null }) => {
+  baseLogger.info("Job extraction stage execution", {
+    jobId,
+    stage: "REQUIREMENTS_EXTRACTION",
+    attempt,
+    durationMs,
+    result,
+    code,
+  });
 };
 
 const processJobExtraction = async (job) => {
@@ -56,10 +73,22 @@ const processJobExtraction = async (job) => {
     if (result?.status === "failed") {
       const reason = {
         code: result.failureCode ?? "JOB_REQUIREMENTS_EXTRACTION_FAILED",
-        retryable: Boolean(result.retryable),
+        retryable: classifyRetry(result).retryable || Boolean(result.retryable),
         statusCode: null,
         message: "Job requirements extraction failed",
       };
+      const isFinalAttempt = attempt >= maxAttempts;
+      if (isFinalAttempt || !reason.retryable) {
+        await persistExtractionFailure({ jobId, reason });
+      }
+      logStageResult({
+        baseLogger,
+        jobId,
+        attempt,
+        durationMs: Date.now() - startedAtMs,
+        result: reason.retryable && !isFinalAttempt ? "retry" : "failed",
+        code: reason.code,
+      });
       if (!reason.retryable) {
         throw new UnrecoverableError(`${reason.code}: ${reason.message}`);
       }
@@ -84,11 +113,31 @@ const processJobExtraction = async (job) => {
       durationMs: Date.now() - startedAtMs,
       structuredRequirements: result?.structuredRequirements ?? null,
     });
+    logStageResult({
+      baseLogger,
+      jobId,
+      attempt,
+      durationMs: Date.now() - startedAtMs,
+      result: "success",
+    });
     return result;
   } catch (error) {
     const attempts = job.opts.attempts ?? env.jobExtractionQueueAttempts;
     const isFinalAttempt = job.attemptsMade + 1 >= attempts;
-    const retryable = isRetriableError(error);
+    const retryable = classifyRetry(error).retryable;
+    const reason = resolveFailureReason(error, "JOB_REQUIREMENTS_EXTRACTION_FAILED");
+    reason.retryable = retryable;
+    if (isFinalAttempt || !retryable) {
+      await persistExtractionFailure({ jobId, reason });
+    }
+    logStageResult({
+      baseLogger,
+      jobId,
+      attempt,
+      durationMs: Date.now() - startedAtMs,
+      result: retryable && !isFinalAttempt ? "retry" : "failed",
+      code: reason.code,
+    });
     Sentry.captureException(error, {
       tags: {
         queue: env.jobExtractionQueueName,
@@ -124,7 +173,7 @@ const processJobExtraction = async (job) => {
     });
 
     baseLogger.error("Job requirements extraction failed", {
-      failureCode: error?.code ?? null,
+      failureCode: reason.code,
       error: error.message,
       retryable,
       isFinalAttempt,
@@ -133,7 +182,7 @@ const processJobExtraction = async (job) => {
 
     if (!retryable) {
       throw new UnrecoverableError(
-        `${error?.code ?? "JOB_REQUIREMENTS_EXTRACTION_FAILED"}: ${error.message}`,
+        `${reason.code}: ${error.message}`,
       );
     }
 

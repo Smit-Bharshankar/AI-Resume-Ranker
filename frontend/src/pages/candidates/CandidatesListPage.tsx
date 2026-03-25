@@ -14,6 +14,7 @@ import {
 } from "../../components/ui/Breadcrumb";
 import { Card } from "../../components/ui/Card";
 import { useDeleteResume } from "../../hooks/resumes/useDeleteResume";
+import { useRetryResume } from "../../hooks/resumes/useRetryResume";
 import { useUpdateCandidateStage } from "../../hooks/resumes/useUpdateCandidateStage";
 import { useResumes } from "../../hooks/resumes/useResumes";
 import { CandidateStage, Resume } from "../../types/resume";
@@ -40,6 +41,7 @@ export function CandidatesListPage() {
   const safeJobId = jobId ?? "";
   const resumesQuery = useResumes(safeJobId);
   const deleteResumeMutation = useDeleteResume();
+  const retryResumeMutation = useRetryResume();
   const updateCandidateStageMutation = useUpdateCandidateStage();
   const [selectedStageFilter, setSelectedStageFilter] =
     useState<CandidateStageFilter>("ALL");
@@ -73,6 +75,13 @@ export function CandidatesListPage() {
       resumeId: resume.id,
       jobId: resume.jobId,
       confirm: true,
+    });
+  };
+
+  const handleRetryResume = async (resume: Resume) => {
+    await retryResumeMutation.mutateAsync({
+      resumeId: resume.id,
+      jobId: resume.jobId,
     });
   };
 
@@ -125,7 +134,7 @@ export function CandidatesListPage() {
       {resumesQuery.isError ? (
         <ErrorState
           title="Failed to load candidates"
-          message={resumesQuery.error.message}
+          message="We could not load candidates right now. Please try again."
           onRetry={() => {
             void resumesQuery.refetch();
           }}
@@ -182,9 +191,15 @@ export function CandidatesListPage() {
           resumes={resumes}
           onStageChange={handleStageChange}
           onDeleteResume={handleDeleteResume}
+          onRetryResume={handleRetryResume}
           deletingResumeId={
             deleteResumeMutation.isPending
               ? deleteResumeMutation.variables?.resumeId
+              : undefined
+          }
+          retryingResumeId={
+            retryResumeMutation.isPending
+              ? retryResumeMutation.variables?.resumeId
               : undefined
           }
           updatingResumeId={

@@ -11,6 +11,9 @@ import {
   validateInsightPayload,
 } from "./insightSchema.validator.js";
 import { buildFailureRecord, resolveFailureReason } from "../ai/failureReason.js";
+import { classifyRetry } from "../../queue/retryPolicy.js";
+import { withOperationTimeout } from "../../utils/operationTimeout.js";
+import { activateGlobalRateLimitCooldown } from "../ai/rateBudget.js";
 
 const MAX_AI_RETRIES = 2;
 
@@ -35,37 +38,6 @@ const isPlainObject = (value) => {
 const getErrorStatus = (error) => {
   const status = error?.status ?? error?.response?.status;
   return Number.isFinite(status) ? status : null;
-};
-
-const isRetriableAiError = (error) => {
-  const status = getErrorStatus(error);
-  if (status !== null) {
-    if (status === 429) {
-      return true;
-    }
-
-    if (status >= 500) {
-      return true;
-    }
-
-    return false;
-  }
-
-  const code = String(error?.code ?? "").toLowerCase();
-  const type = String(error?.type ?? "").toLowerCase();
-  const message = String(error?.message ?? "").toLowerCase();
-
-  return (
-    type.includes("rate_limit") ||
-    code.includes("timeout") ||
-    code.includes("econnreset") ||
-    code.includes("enotfound") ||
-    code.includes("eai_again") ||
-    code.includes("econnrefused") ||
-    code.includes("etimedout") ||
-    message.includes("socket hang up") ||
-    code.includes("ai_provider_timeout")
-  );
 };
 
 const resolveRetryDelayMs = (error, attempt) => {
@@ -104,13 +76,18 @@ const requestInsights = async ({
     model: provider.model,
   });
 
-  const result = await provider.generateJson({
-    systemPrompt,
-    userPrompt,
-    temperature: 0.1,
-    responseSchema: INSIGHT_JSON_SCHEMA,
-    schemaName: "resume_insights",
-    rateLimitBucket: "insights",
+  const result = await withOperationTimeout({
+    timeoutMs: env.aiCallTimeoutMs,
+    operationName: "Resume insights AI call",
+    operation: () =>
+      provider.generateJson({
+        systemPrompt,
+        userPrompt,
+        temperature: 0.1,
+        responseSchema: INSIGHT_JSON_SCHEMA,
+        schemaName: "resume_insights",
+        rateLimitBucket: "insights",
+      }),
   });
 
   logger.info("Resume insight AI response received", {
@@ -264,8 +241,12 @@ const process = async (resumeId) => {
 
       return { status: "generated", insights };
     } catch (error) {
-      const retriable = isRetriableAiError(error);
+      const retryClassification = classifyRetry(error);
+      const retriable = retryClassification.retryable;
       const statusCode = getErrorStatus(error);
+      if (statusCode === 429) {
+        await activateGlobalRateLimitCooldown();
+      }
       const isValidationError = error instanceof InsightSchemaValidationError;
       const isInvalidJsonError = error?.code === "INVALID_JSON_RESPONSE";
 
@@ -280,7 +261,7 @@ const process = async (resumeId) => {
         error: error.message,
       });
 
-      if (isFinalAttempt || !retriable) {
+      if (isFinalAttempt || !retriable || isValidationError) {
         const reason = isValidationError
           ? {
               code: "INSIGHT_SCHEMA_VALIDATION_FAILED",
@@ -288,6 +269,13 @@ const process = async (resumeId) => {
               statusCode: null,
               message: error.message,
             }
+          : isInvalidJsonError && isFinalAttempt
+            ? {
+                code: "AI_INVALID_JSON_RESPONSE",
+                retryable: false,
+                statusCode: null,
+                message: "Invalid JSON returned by AI after retries",
+              }
           : resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
         await resumeService.markInsightsFailed(
           resumeId,

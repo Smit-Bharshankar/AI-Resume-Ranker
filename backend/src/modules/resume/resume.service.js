@@ -72,6 +72,20 @@ const getResumeById = async (id, userId) => {
   return resumeRepository.getResumeById(id, userId);
 };
 
+const resetFailedStatusForRetry = async ({
+  id,
+  userId,
+  fromStatus,
+  toStatus,
+}) => {
+  return resumeRepository.resetFailedStatusForRetry({
+    id,
+    userId,
+    fromStatus,
+    toStatus,
+  });
+};
+
 const getResumeOwnerContext = async (id) => {
   return resumeRepository.getResumeOwnerContext(id);
 };
@@ -220,6 +234,10 @@ const getResumesByJob = async (jobId, userId) => {
   return resumeRepository.getResumesByJob(jobId, userId);
 };
 
+const findStuckResumes = async ({ statuses, staleBefore, limit }) => {
+  return resumeRepository.findStuckResumes({ statuses, staleBefore, limit });
+};
+
 const countResumesByJob = async (jobId, userId) => {
   return resumeRepository.countResumesByJob(jobId, userId);
 };
@@ -252,6 +270,7 @@ const resumeService = {
   updateStructuredData,
   updateLastProcessingFailure,
   getResumeById,
+  resetFailedStatusForRetry,
   getResumeOwnerContext,
   completeTextExtraction,
   markExtractionFailed,
@@ -268,6 +287,7 @@ const resumeService = {
   deleteResumeByOwner,
   getResumesByJob,
   countResumesByJob,
+  findStuckResumes,
   getResumeSignedFileUrl,
   PROCESSING_RESUME_STATUSES,
   ResumeDeletionServiceError,

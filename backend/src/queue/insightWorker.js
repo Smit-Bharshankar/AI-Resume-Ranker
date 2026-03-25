@@ -9,6 +9,7 @@ import resumeService from "../modules/resume/resume.service.js";
 import { shutdownPosthog } from "../analytics/posthog.js";
 import { withProcessTimeout } from "./processorTimeout.js";
 import { buildFailureRecord, resolveFailureReason } from "../modules/ai/failureReason.js";
+import { classifyRetry } from "./retryPolicy.js";
 
 const signal = (icon, label, meta = {}) => {
   const ts = new Date().toISOString();
@@ -55,6 +56,17 @@ const persistInsightFailure = async ({ resumeId, failure, baseLogger }) => {
     resumeId,
   });
   signal("🧷", "insight:failure-persisted-fallback", { resumeId });
+};
+
+const logStageResult = ({ baseLogger, resumeId, attempt, durationMs, result, code = null }) => {
+  baseLogger.info("Insight stage execution", {
+    resumeId,
+    stage: "INSIGHTS",
+    attempt,
+    durationMs,
+    result,
+    code,
+  });
 };
 
 const processInsightJob = async (job) => {
@@ -108,10 +120,18 @@ const processInsightJob = async (job) => {
     if (result?.status === "failed") {
       const reason = {
         code: result.failureCode ?? "RESUME_INSIGHTS_FAILED",
-        retryable: Boolean(result.retryable),
+        retryable: classifyRetry(result).retryable || Boolean(result.retryable),
         statusCode: null,
         message: "Resume insight generation failed",
       };
+      logStageResult({
+        baseLogger,
+        resumeId,
+        attempt,
+        durationMs: Date.now() - startedAtMs,
+        result: reason.retryable ? "retry" : "failed",
+        code: reason.code,
+      });
       if (!reason.retryable) {
         throwUnrecoverable(reason);
       }
@@ -143,18 +163,34 @@ const processInsightJob = async (job) => {
       durationMs: Date.now() - startedAtMs,
       recommendation: result?.insights?.recommendation ?? null,
     });
+    logStageResult({
+      baseLogger,
+      resumeId,
+      attempt,
+      durationMs: Date.now() - startedAtMs,
+      result: "success",
+    });
 
     return result;
   } catch (error) {
     const isFinalAttempt = attempt >= maxAttempts;
     const reason = resolveFailureReason(error, "RESUME_INSIGHTS_FAILED");
-    if (isFinalAttempt) {
+    reason.retryable = classifyRetry(error).retryable;
+    if (isFinalAttempt || !reason.retryable) {
       await persistInsightFailure({
         resumeId,
         failure: buildFailureRecord({ stage: "insight_worker", reason }),
         baseLogger,
       });
     }
+    logStageResult({
+      baseLogger,
+      resumeId,
+      attempt,
+      durationMs: Date.now() - startedAtMs,
+      result: reason.retryable && !isFinalAttempt ? "retry" : "failed",
+      code: reason.code,
+    });
     signal("❌", "insight:error", {
       resumeId,
       code: reason.code,
