@@ -71,6 +71,7 @@ export type Resume = {
   lastError?: unknown | null;
   stage: CandidateStage;
   score?: number;
+  recommendation?: Insights["recommendation"] | null;
   scoreBreakdown?: ScoreBreakdown;
   insights?: Insights;
   structuredData?: ResumeStructuredData;

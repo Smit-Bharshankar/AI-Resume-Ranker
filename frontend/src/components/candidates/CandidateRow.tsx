@@ -27,7 +27,7 @@ const toScoreLabel = (score?: number): string => {
 };
 
 const toRecommendationLabel = (resume: Resume): string => {
-  const recommendation = resume.insights?.recommendation;
+  const recommendation = resume.recommendation;
   return recommendation ? recommendation.replace(/_/g, " ") : "-";
 };
 

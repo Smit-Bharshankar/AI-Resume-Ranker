@@ -1,16 +1,8 @@
-const ALLOWED_RECOMMENDATIONS = new Set([
-  "STRONG_FIT",
-  "GOOD_FIT",
-  "MODERATE_FIT",
-  "WEAK_FIT",
-]);
-
 const ALLOWED_KEYS = [
   "summary",
   "strengths",
   "weaknesses",
   "interview_questions",
-  "recommendation",
 ];
 
 const INSIGHT_JSON_SCHEMA = {
@@ -22,10 +14,6 @@ const INSIGHT_JSON_SCHEMA = {
     strengths: { type: "array", items: { type: "string" } },
     weaknesses: { type: "array", items: { type: "string" } },
     interview_questions: { type: "array", items: { type: "string" } },
-    recommendation: {
-      type: "string",
-      enum: ["STRONG_FIT", "GOOD_FIT", "MODERATE_FIT", "WEAK_FIT"],
-    },
   },
 };
 
@@ -68,19 +56,6 @@ const normalizeArrayOfStrings = (value, key) => {
   return normalized;
 };
 
-const validateInsightRecommendation = (value) => {
-  if (typeof value !== "string") {
-    return "MODERATE_FIT";
-  }
-
-  const normalized = value.trim().toUpperCase();
-  if (!ALLOWED_RECOMMENDATIONS.has(normalized)) {
-    return "MODERATE_FIT";
-  }
-
-  return normalized;
-};
-
 const validateInsightPayload = (payload) => {
   if (!isPlainObject(payload)) {
     throw new InsightSchemaValidationError("Insights payload must be a JSON object");
@@ -101,13 +76,11 @@ const validateInsightPayload = (payload) => {
       payload.interview_questions,
       "interview_questions",
     ),
-    recommendation: validateInsightRecommendation(payload.recommendation),
   };
 };
 
 export {
   InsightSchemaValidationError,
-  ALLOWED_RECOMMENDATIONS,
   INSIGHT_JSON_SCHEMA,
   validateInsightPayload,
 };

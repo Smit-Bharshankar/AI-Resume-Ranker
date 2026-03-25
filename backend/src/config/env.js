@@ -184,6 +184,9 @@ const env = {
   freeTierMaxJobsPerUser: toNumber(process.env.FREE_TIER_MAX_JOBS_PER_USER, 5),
   freeTierMaxResumesPerJob: toNumber(process.env.FREE_TIER_MAX_RESUMES_PER_JOB, 30),
   freeTierMaxResumesPerUser: toNumber(process.env.FREE_TIER_MAX_RESUMES_PER_USER, 100),
+  recommendationStrongFitMin: toNumber(process.env.RECOMMENDATION_STRONG_FIT_MIN, 80),
+  recommendationGoodFitMin: toNumber(process.env.RECOMMENDATION_GOOD_FIT_MIN, 60),
+  recommendationModerateFitMin: toNumber(process.env.RECOMMENDATION_MODERATE_FIT_MIN, 40),
   uploadMaxFileSizeBytes: toNumber(process.env.UPLOAD_MAX_FILE_SIZE_BYTES, 5 * 1024 * 1024),
   uploadMaxPdfPages: toNumber(process.env.UPLOAD_MAX_PDF_PAGES, 5),
 };

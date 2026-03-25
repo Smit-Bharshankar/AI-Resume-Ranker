@@ -185,7 +185,7 @@ export function CandidateDetailPage() {
           updateCandidateStageMutation.isPending &&
           updateCandidateStageMutation.variables?.resumeId === resume.id
         }
-        recommendation={resume.insights?.recommendation}
+        recommendation={resume.recommendation}
       />
 
       {isProcessing ? (
@@ -248,7 +248,7 @@ export function CandidateDetailPage() {
             isGenerating={isInsightsGenerating}
           />
           <InsightRecommendation
-            insights={resume.insights}
+            recommendation={resume.recommendation}
             isGenerating={isInsightsGenerating}
           />
           <CandidateSkillsMatch

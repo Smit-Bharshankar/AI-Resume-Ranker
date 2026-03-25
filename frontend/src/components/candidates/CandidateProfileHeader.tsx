@@ -1,6 +1,5 @@
 import { memo } from "react";
-import { Insights } from "../../types/insights";
-import { CandidateStage, ResumeStatus } from "../../types/resume";
+import { CandidateStage, Resume, ResumeStatus } from "../../types/resume";
 import { isResumeProcessingStatus } from "../../utils/resumeStatusUtils";
 import { Badge } from "../ui/Badge";
 import { Card } from "../ui/Card";
@@ -17,12 +16,12 @@ type CandidateProfileHeaderProps = {
   stage: CandidateStage;
   onStageChange?: (stage: CandidateStage) => void;
   isStageUpdating?: boolean;
-  recommendation?: Insights["recommendation"];
+  recommendation?: Resume["recommendation"];
   className?: string;
 };
 
 const getRecommendationVariant = (
-  recommendation: Insights["recommendation"] | undefined
+  recommendation: CandidateProfileHeaderProps["recommendation"]
 ): "secondary" | "success" | "warning" | "destructive" => {
   if (!recommendation) {
     return "secondary";
@@ -40,7 +39,7 @@ const getRecommendationVariant = (
 };
 
 const toRecommendationLabel = (
-  recommendation: Insights["recommendation"] | undefined
+  recommendation: CandidateProfileHeaderProps["recommendation"]
 ): string => {
   if (!recommendation) {
     return "Pending";

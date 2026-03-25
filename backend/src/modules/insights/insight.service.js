@@ -14,6 +14,10 @@ import { buildFailureRecord, resolveFailureReason } from "../ai/failureReason.js
 import { classifyRetry } from "../../queue/retryPolicy.js";
 import { withOperationTimeout } from "../../utils/operationTimeout.js";
 import { activateGlobalRateLimitCooldown } from "../ai/rateBudget.js";
+import {
+  resolveRecommendationFromScore,
+  resolveRecommendationScore,
+} from "../recommendation/recommendationPolicy.js";
 
 const MAX_AI_RETRIES = 2;
 
@@ -209,13 +213,39 @@ const process = async (resumeId) => {
     const isFinalAttempt = attempt === MAX_AI_RETRIES;
 
     try {
-      const insights = await requestInsights({
+      const aiInsights = await requestInsights({
         resumeId,
         jobId: resume.jobId,
         structuredResume: resume.structuredData,
         structuredRequirements: job.structuredRequirements,
         scoreBreakdown: resume.scoreBreakdown,
       });
+
+      const recommendationScore = resolveRecommendationScore(resume);
+      const recommendation = resolveRecommendationFromScore(recommendationScore);
+      if (!recommendation) {
+        const reason = {
+          code: "MISSING_SCORE_FOR_RECOMMENDATION",
+          retryable: false,
+          statusCode: null,
+          message: "Cannot derive deterministic recommendation without a valid score",
+        };
+        await resumeService.markInsightsFailed(
+          resumeId,
+          buildFailureRecord({ stage: "insights_generation", reason }),
+        );
+        scopedLogger.error("Cannot derive deterministic recommendation without a valid score", {
+          attempt: attemptNumber,
+          maxRetries: MAX_AI_RETRIES,
+          durationMs: Date.now() - startedAtMs,
+        });
+        return { status: "failed", failureCode: reason.code, retryable: false };
+      }
+
+      const insights = {
+        ...aiInsights,
+        recommendation,
+      };
 
       const saved = await resumeService.completeInsightsGeneration({
         id: resumeId,

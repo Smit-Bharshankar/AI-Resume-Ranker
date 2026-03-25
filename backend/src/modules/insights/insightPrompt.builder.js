@@ -29,8 +29,7 @@ const buildInsightPrompt = ({
   "summary": "",
   "strengths": [],
   "weaknesses": [],
-  "interview_questions": [],
-  "recommendation": "STRONG_FIT | GOOD_FIT | MODERATE_FIT | WEAK_FIT"
+  "interview_questions": []
 }`;
 
   const resumeJson = truncate(normalizeJsonForPrompt(structuredResume));
@@ -43,7 +42,6 @@ const buildInsightPrompt = ({
     "Return exactly the keys defined by the schema and no additional keys.",
     "Use only the provided data. Do not hallucinate achievements, tools, roles, or years of experience.",
     "Use a concise professional recruiter tone inside JSON strings.",
-    "recommendation must be exactly one of: STRONG_FIT, GOOD_FIT, MODERATE_FIT, WEAK_FIT.",
   ].join(" ");
 
   const userPrompt = [

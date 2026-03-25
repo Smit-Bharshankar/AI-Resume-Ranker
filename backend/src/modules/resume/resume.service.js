@@ -2,6 +2,7 @@ import resumeRepository from "./resume.repository.js";
 import supabaseStorage from "../../storage/supabaseStorage.js";
 import logger from "../../utils/logger.js";
 import { cancelResumeQueueJobs } from "../../queue/deletionCleanup.js";
+import { decorateResumeWithRecommendation } from "../recommendation/recommendationPolicy.js";
 
 const PROCESSING_RESUME_STATUSES = new Set([
   "UPLOADED",
@@ -69,7 +70,8 @@ const updateLastProcessingFailure = async (id, failure = null) => {
 };
 
 const getResumeById = async (id, userId) => {
-  return resumeRepository.getResumeById(id, userId);
+  const resume = await resumeRepository.getResumeById(id, userId);
+  return decorateResumeWithRecommendation(resume);
 };
 
 const resetFailedStatusForRetry = async ({
@@ -231,7 +233,8 @@ const deleteResumeByOwner = async ({ resumeId, userId, confirm = false }) => {
 };
 
 const getResumesByJob = async (jobId, userId) => {
-  return resumeRepository.getResumesByJob(jobId, userId);
+  const resumes = await resumeRepository.getResumesByJob(jobId, userId);
+  return resumes.map((resume) => decorateResumeWithRecommendation(resume));
 };
 
 const findStuckResumes = async ({ statuses, staleBefore, limit }) => {

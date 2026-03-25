@@ -1,4 +1,5 @@
 import resumeRepository from "./resume.repository.js";
+import { decorateResumeWithRecommendation } from "../recommendation/recommendationPolicy.js";
 
 const CANDIDATE_STAGES = Object.freeze([
   "NEW",
@@ -48,14 +49,15 @@ const updateResumeStage = async ({ resumeId, userId, stage }) => {
   }
 
   if (resume.stage === stage) {
-    return resume;
+    return decorateResumeWithRecommendation(resume);
   }
 
   if (!canTransitionStage(resume.stage, stage)) {
     throw new StageServiceError("Invalid stage transition", 409);
   }
 
-  return resumeRepository.updateResumeStage(resumeId, stage);
+  const updated = await resumeRepository.updateResumeStage(resumeId, stage);
+  return decorateResumeWithRecommendation(updated);
 };
 
 const stageService = {

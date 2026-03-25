@@ -1,16 +1,16 @@
 import { memo } from "react";
-import { Insights } from "../../types/insights";
+import { Resume } from "../../types/resume";
 import { Badge } from "../ui/Badge";
 import { InsightSection } from "./InsightSection";
 
 type InsightRecommendationProps = {
-  insights?: Insights;
+  recommendation?: Resume["recommendation"];
   isGenerating?: boolean;
   className?: string;
 };
 
 const getVariant = (
-  recommendation: Insights["recommendation"] | undefined
+  recommendation: Resume["recommendation"] | undefined
 ): "secondary" | "success" | "warning" | "destructive" => {
   if (!recommendation) {
     return "secondary";
@@ -28,7 +28,7 @@ const getVariant = (
 };
 
 const toDisplayRecommendation = (
-  recommendation: Insights["recommendation"] | undefined
+  recommendation: Resume["recommendation"] | undefined
 ): string => {
   if (!recommendation) {
     return "";
@@ -50,11 +50,10 @@ const toDisplayRecommendation = (
 };
 
 function InsightRecommendationComponent({
-  insights,
+  recommendation,
   isGenerating = false,
   className,
 }: InsightRecommendationProps) {
-  const recommendation = insights?.recommendation;
   const displayRecommendation = toDisplayRecommendation(recommendation);
 
   return (
