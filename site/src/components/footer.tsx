@@ -20,7 +20,9 @@ export default function Footer() {
     <footer className="relative z-20 mt-10 border-t border-border/70 bg-background px-6 pb-12 pt-8 md:px-10">
       <div className="mx-auto w-full max-w-6xl">
         <div className="mb-10">
-          <p className="text-2xl font-semibold tracking-tight">Sortres</p>
+          <p className="logo-wordmark text-2xl font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+            Sortres<span className="ml-0.5 text-red-700">.</span>
+          </p>
         </div>
 
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

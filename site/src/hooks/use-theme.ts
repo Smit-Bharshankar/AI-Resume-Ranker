@@ -4,23 +4,23 @@ import { useEffect, useMemo, useState } from "react";
 
 export type ThemePreference = "light" | "dark" | "system";
 export type BrandTheme =
+  | "cherry-rose"
   | "legacy-purple"
   | "dark-teal"
   | "rosewood"
-  | "cherry-rose"
   | "prussian-blue"
   | "harvest-orange"
   | "coffee-cinnabar";
 
 const THEME_STORAGE_KEY = "sortres-theme";
 const BRAND_THEME_STORAGE_KEY = "sortres-brand-theme";
-export const DEFAULT_BRAND_THEME: BrandTheme = "legacy-purple";
+export const DEFAULT_BRAND_THEME: BrandTheme = "cherry-rose";
 
 export const BRAND_THEME_OPTIONS: Array<{ value: BrandTheme; label: string }> = [
+  { value: "cherry-rose", label: "Cherry Rose" },
   { value: "legacy-purple", label: "Legacy Purple" },
   { value: "dark-teal", label: "Dark Teal" },
   { value: "rosewood", label: "Rosewood" },
-  { value: "cherry-rose", label: "Cherry Rose" },
   { value: "prussian-blue", label: "Prussian Blue" },
   { value: "harvest-orange", label: "Harvest Orange" },
   { value: "coffee-cinnabar", label: "Coffee Cinnabar" },

@@ -41,8 +41,8 @@ export default function Navbar() {
               : "border border-transparent bg-transparent text-foreground dark:text-white"
           )}
         >
-          <Link href="/" className="text-lg font-semibold tracking-tight">
-            Sortres
+          <Link href="/" className="logo-wordmark text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+            Sortres<span className="ml-0.5 text-red-700">.</span>
           </Link>
 
           <nav className="hidden items-center gap-7 lg:flex">
@@ -112,7 +112,9 @@ export default function Navbar() {
               className="fixed top-0 right-0 z-60 flex h-full w-72 flex-col border-l border-border/70 bg-background p-5"
             >
               <div className="mb-6 flex items-center justify-between">
-                <p className="text-base font-semibold">Sortres</p>
+                <p className="logo-wordmark text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                  Sortres<span className="text-red-700">.</span>
+                </p>
                 <button
                   type="button"
                   aria-label="Close navigation menu"

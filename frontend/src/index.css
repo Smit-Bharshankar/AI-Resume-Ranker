@@ -6,7 +6,17 @@
   src:
     url("../assests/fonts/Dream Avenue.woff2") format("woff2"),
     url("../assests/fonts/Dream Avenue.woff") format("woff"),
-    url("../assests/fonts/Dream Avenue.ttf") format("truetype");
+    url("../assests/fonts/Dream Avenue.ttf") format("truetype"),
+    url("../assests/fonts/Charm-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Charm";
+  src:
+    url("../assests/fonts/Charm-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -41,6 +51,7 @@
 
 :root {
   --radius: 0.625rem;
+  --logo-font-family: "Geist", "Geist Sans", "Inter", "Segoe UI", system-ui, sans-serif;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -110,4 +121,12 @@
 
 .font-dream-avenue {
   font-family: "Dream Avenue", "Times New Roman", serif;
+}
+
+.font-charm {
+  font-family: "Charm", "Times New Roman", serif;
+}
+
+.logo-wordmark {
+  font-family: var(--logo-font-family);
 }

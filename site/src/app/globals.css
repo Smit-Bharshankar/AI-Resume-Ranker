@@ -92,6 +92,8 @@
   --brand-badge-fg: #ffffff;
   --brand-progress-start: var(--brand-accent);
   --brand-progress-end: var(--brand-accent-strong);
+  /* Update this value when you want to change the logo/wordmark font globally. */
+  --logo-font-family: var(--font-geist-sans);
 }
 
 .dark {
@@ -256,6 +258,10 @@
 }
 
 @layer utilities {
+  .logo-wordmark {
+    font-family: var(--logo-font-family), sans-serif;
+  }
+
   .brand-text-gradient {
     background-image: linear-gradient(to right, var(--brand-gradient-start), var(--brand-gradient-end));
     -webkit-background-clip: text;

@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png", sizes: "any" }],
+    shortcut: ["/icon.png"],
+  },
   openGraph: {
     title: "SortRes | AI Resume Screening Platform",
     description:
@@ -50,7 +54,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-brand-theme="legacy-purple">
+    <html lang="en" suppressHydrationWarning data-brand-theme="cherry-rose">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Script id="theme-init" strategy="beforeInteractive">
           {`(() => {
@@ -68,7 +72,7 @@ export default function RootLayout({
                 "harvest-orange",
                 "coffee-cinnabar",
               ];
-              const resolvedBrandTheme = allowedBrandThemes.includes(savedBrandTheme) ? savedBrandTheme : "legacy-purple";
+              const resolvedBrandTheme = allowedBrandThemes.includes(savedBrandTheme) ? savedBrandTheme : "cherry-rose";
               document.documentElement.classList.toggle("dark", resolved === "dark");
               document.documentElement.setAttribute("data-brand-theme", resolvedBrandTheme);
             } catch (_) {}
