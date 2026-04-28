@@ -1,13 +1,14 @@
 import BetaCTA from "@/components/beta-cta";
 import AIPipeline from "@/components/ai-pipeline";
 import FAQ from "@/components/faq";
-import Features from "@/components/features";
 import Hero from "@/components/hero";
 import HowItWorks from "@/components/how-it-works";
 import Problem from "@/components/problem";
 import ProductPreview from "@/components/product-preview";
 import Stats from "@/components/stats";
 import Workflow from "@/components/workflow";
+import DemoSection from "@/components/ui/DemoSection";
+import FeaturesSection from "@/components/ui/FeaturesSection";
 
 function SectionDivider() {
   return <div className="my-24 h-px bg-linear-to-r from-transparent via-border to-transparent" />;
@@ -22,7 +23,11 @@ export default function Home() {
       <main className="relative z-10 flex flex-col">
         <Hero />
         <SectionDivider />
+        <DemoSection />
+        <SectionDivider />
         <Workflow />
+        <SectionDivider />
+        <FeaturesSection />
         <SectionDivider />
         <Problem />
         <SectionDivider />
@@ -31,8 +36,6 @@ export default function Home() {
         <AIPipeline />
         <SectionDivider />
         <ProductPreview />
-        <SectionDivider />
-        <Features />
         <SectionDivider />
         <Stats />
         <SectionDivider />
