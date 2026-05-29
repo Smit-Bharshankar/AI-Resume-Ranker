@@ -5,7 +5,6 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
-import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,7 +53,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-brand-theme="cherry-rose">
+    <html lang="en" suppressHydrationWarning data-brand-theme="prussian-blue">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Script id="theme-init" strategy="beforeInteractive">
           {`(() => {
@@ -64,15 +63,15 @@ export default function RootLayout({
               const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
               const resolved = saved === "light" || saved === "dark" ? saved : (prefersDark ? "dark" : "light");
               const allowedBrandThemes = [
+                "prussian-blue",
                 "legacy-purple",
                 "dark-teal",
                 "rosewood",
                 "cherry-rose",
-                "prussian-blue",
                 "harvest-orange",
                 "coffee-cinnabar",
               ];
-              const resolvedBrandTheme = allowedBrandThemes.includes(savedBrandTheme) ? savedBrandTheme : "cherry-rose";
+              const resolvedBrandTheme = allowedBrandThemes.includes(savedBrandTheme) ? savedBrandTheme : "prussian-blue";
               document.documentElement.classList.toggle("dark", resolved === "dark");
               document.documentElement.setAttribute("data-brand-theme", resolvedBrandTheme);
             } catch (_) {}
