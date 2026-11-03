@@ -194,8 +194,8 @@ The scoring and grading pipeline is designed for repeatability:
 - Retry/recovery workers for resilient async processing.
 
 Operational references:
-- `backend/docs/backend-workers-architecture.md`
-- `backend/docs/retry-recovery-reliability.md`
+- `docs/06-operations/queues-and-workers.md`
+- `docs/03-features/resumes/retry-and-recovery.md`
 
 ---
 
